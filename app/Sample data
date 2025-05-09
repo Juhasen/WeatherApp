@@ -1,0 +1,43 @@
+val sampleData = WeatherModel(
+        main = Main(
+            temp = 21.5.toString(),
+            temp_min = 18.2.toString(),
+            temp_max = 25.3.toString(),
+            feels_like = 12.56.toString(),
+            grnd_level = 999.toString(),
+            humidity = 43.toString(),
+            pressure = 1019.toString(),
+            sea_level = 1019.toString()
+        ),
+        weather = Weather(
+            id = 800.toString(),
+            main = "Clear",
+            description = "clear sky",
+            icon = "01d"
+        ),
+        base = "stations",
+        clouds = Clouds(
+            all = "0"
+        ),
+        cod = 200,
+        coord = Coord(
+            lon = 19.4062.toString(),
+            lat = 51.8556.toString()
+        ),
+        dt = 1746803159,
+        id = 3080251,
+        name = "Zgierz",
+        sys = Sys(
+            type = "2",
+            id = "2007986",
+            country = "PL",
+            sunrise = "1746759518",
+            sunset = "1746814742"
+        ),
+        timezone = 7200,
+        visibility = 10000,
+        wind = Wind(
+            speed = 4.12.toString(),
+            deg = 330.toString()
+        ),
+    )

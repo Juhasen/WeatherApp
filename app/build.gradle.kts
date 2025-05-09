@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -59,4 +61,6 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:$retroFitVersion")
 
     implementation("androidx.compose.runtime:runtime-livedata:1.8.1")
+    implementation("androidx.compose.material:material:1.8.1")
+    implementation ("io.coil-kt:coil-compose:2.2.2")
 }
