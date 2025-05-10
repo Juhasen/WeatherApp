@@ -1,6 +1,7 @@
 package pl.juhas.weatherapp.api
 
 data class Wind(
-    val deg: String,
-    val speed: String
+    val deg: Int,
+    val gust: Double,
+    val speed: Double
 )

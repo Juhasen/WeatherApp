@@ -1,8 +1,5 @@
 package pl.juhas.weatherapp
 
-import android.R.attr.thickness
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,23 +9,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ShouldPauseCallback
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -45,40 +35,44 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import pl.juhas.weatherapp.api.Forecast
+import pl.juhas.weatherapp.api.ForecastModel
 import pl.juhas.weatherapp.api.NetworkResponse
+import pl.juhas.weatherapp.api.Weather
 import pl.juhas.weatherapp.api.WeatherModel
 import kotlin.math.roundToInt
 
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
-
     var city by remember { mutableStateOf("") }
 
-    val weatherResult = viewModel.weatherResult.observeAsState()
+    val current by viewModel.currentWeatherResult.observeAsState()
+    val forecast by viewModel.forecastResult.observeAsState()
+
+    // Kick off both requests when the user taps search
+    fun load(city: String) {
+        viewModel.getCurrentWeather(city)
+        viewModel.getForecast(city)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1B1B3A), // Dark navy at top
-                        Color(0xFF3C2B8E), // Mid purple
-                        Color(0xFFA142F4)  // Pinkish purple bottom
-                    )
-                )
+                brush = Brush.verticalGradient(listOf(
+                    Color(0xFF1B1B3A),
+                    Color(0xFF3C2B8E),
+                    Color(0xFFA142F4)
+                ))
             )
             .padding(16.dp)
     ) {
@@ -86,32 +80,25 @@ fun WeatherPage(viewModel: WeatherViewModel) {
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Search bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp), // Add some space if needed
-                    shape = RoundedCornerShape(30.dp),
-                    singleLine = true,
                     value = city,
                     onValueChange = { city = it },
-                    label = {
-                        Text(
-                            text = "Search for a location",
-                            color = Color.LightGray,
-                        )
-                    },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(30.dp),
+                    textStyle = TextStyle(
                         color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     ),
+                    singleLine = true,
+                    label = { Text("Search for a location", color = Color.LightGray) },
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.White,
                         unfocusedIndicatorColor = Color.White,
@@ -120,37 +107,60 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                         cursorColor = Color.White
                     ),
                     trailingIcon = {
-                        IconButton(onClick = { viewModel.getData("Zgierz") }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = Color.White
-                            )
+                        IconButton(onClick = {
+                            val q = city.ifBlank { "Zgierz" }
+                            load(q)
+                        }) {
+                            Icon(Icons.Default.Search, null, tint = Color.White)
                         }
                     }
                 )
             }
 
-            when (val result = weatherResult.value) {
-                is NetworkResponse.Error -> {
-                    ErrorHandler(
-                        errorMessage = result.message
+            // Show loading if either is loading
+            if (current is NetworkResponse.Loading || forecast is NetworkResponse.Loading) {
+                CircularProgressIndicator(color = Color.White)
+                return@Column
+            }
+
+            // Show error if either failed
+            val errorMessage = when {
+                current is NetworkResponse.Error -> (current as NetworkResponse.Error).message
+                forecast is NetworkResponse.Error -> (forecast as NetworkResponse.Error).message
+                else -> null
+            }
+            if (errorMessage != null) {
+                ErrorHandler(errorMessage)
+                return@Column
+            }
+
+            // Only when both are success, render the UI
+            if (current is NetworkResponse.Success<*> && forecast is NetworkResponse.Success<*>) {
+                val currentModel  = (current as NetworkResponse.Success<*>).data as WeatherModel
+                val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
+
+                // Current weather
+                WeatherDetails(currentModel)
+
+                // The toggle that shows either details or forecast
+                WeatherDetailsWithToggle(currentModel, forecastModel)
+            } else {
+                // Initial placeholder
+                Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Enter a city name to retrieve the weather",
+                        color = Color.White,
+                        fontSize = 18.sp
                     )
                 }
-
-                NetworkResponse.Loading -> {
-                    CircularProgressIndicator(color = Color.White)
-                }
-
-                is NetworkResponse.Success<*> -> {
-                    WeatherDetails(data = result.data as WeatherModel)
-                }
-
-                null -> {}
             }
         }
     }
 }
+
 
 @Composable
 fun ErrorHandler(errorMessage: String) {
@@ -170,14 +180,15 @@ fun ErrorHandler(errorMessage: String) {
 }
 
 @Composable
-fun WeatherDetails(data: WeatherModel) {
-    val iconUrl = "https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png"
+fun WeatherDetails(current: WeatherModel) {
+
+
+    val iconUrl = "https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png"
 
     Surface(
-
         shape = RoundedCornerShape(30.dp),
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
+        tonalElevation = 15.dp,
+        shadowElevation = 15.dp,
         modifier = Modifier
             .padding(16.dp)
             .border(
@@ -185,9 +196,7 @@ fun WeatherDetails(data: WeatherModel) {
                 color = Color.LightGray,
                 shape = RoundedCornerShape(30.dp)
             )
-
-    )
-    {
+    ) {
         Box(
             modifier = Modifier
                 .background(
@@ -202,7 +211,7 @@ fun WeatherDetails(data: WeatherModel) {
                     )
                 )
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(10.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -221,17 +230,17 @@ fun WeatherDetails(data: WeatherModel) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "${data.name}, ${data.sys.country}",
+                        text = "${current.name}, ${current.sys.country}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
                     )
                 }
 
-                //Weather icon
+                // Weather icon
                 AsyncImage(
                     model = iconUrl,
-                    contentDescription = data.weather[0].description,
+                    contentDescription = current.weather[0].description,
                     modifier = Modifier.size(64.dp),
                     placeholder = painterResource(R.drawable.ic_placeholder),
                     error = painterResource(R.drawable.ic_error)
@@ -239,51 +248,28 @@ fun WeatherDetails(data: WeatherModel) {
 
                 // Temperature
                 Text(
-                    text = "${data.main.temp.toFloat().roundToInt()}°",
+                    text = "${current.main.temp.toFloat().roundToInt()}°",
                     fontSize = 64.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
 
-
-                // Description of weather
+                // Description
                 Text(
-                    text = data.weather[0].description.replaceFirstChar { it.uppercase() },
+                    text = current.weather[0].description.replaceFirstChar { it.uppercase() },
                     fontSize = 18.sp,
                     color = Color.White
                 )
 
-                // Min / Max row
+                //Refresh date
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround
-                ) {
+                )
+                {
                     Text(
-                        text = "Max: ${data.main.temp_max.toFloat().roundToInt()}°",
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Min: ${data.main.temp_min.toFloat().roundToInt()}°",
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
-                }
-
-                // Wind speed / Ground level
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    Text(
-                        text = "Wind: ${data.wind.speed} m/s",
-                        fontSize = 13.sp,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Ground level: ${data.main.grnd_level}m",
-                        fontSize = 13.sp,
+                        text = "Last updated: ${current.dt}",
+                        fontSize = 14.sp,
                         color = Color.White
                     )
                 }
@@ -291,3 +277,150 @@ fun WeatherDetails(data: WeatherModel) {
         }
     }
 }
+
+@Composable
+fun WeatherDetailsWithToggle(current: WeatherModel, forecast: ForecastModel) {
+    // 0 = Details, 1 = Forecast
+    var currentTab by remember { mutableStateOf(0) }
+
+
+    // Toggle buttons
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Button(
+            onClick = { currentTab = 0 },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (currentTab == 0) Color.White else Color.Gray.copy(alpha = 0.3f)
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 4.dp)
+        ) {
+            Text("Details", color = Color.Black)
+        }
+        Button(
+            onClick = { currentTab = 1 },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (currentTab == 1) Color.White else Color.Gray.copy(alpha = 0.3f)
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+        ) {
+            Text("Forecast", color = Color.Black)
+        }
+    }
+
+    // Conditional content area
+    when (currentTab) {
+        0 -> DetailedInfo(current)
+        1 -> ForecastView(forecast)
+    }
+}
+
+@Composable
+fun ForecastView(x0: ForecastModel) {
+    Text("Forecast View", color = Color.White, fontSize = 18.sp)
+}
+
+@Composable
+fun DetailedInfo(x0: WeatherModel) {
+    Text("Detailed Info", color = Color.White, fontSize = 18.sp)
+}
+
+
+//@Composable
+//fun ForecastView(data: ForecastModel) {
+//    // Group 3-hour entries by calendar date
+//    val groupedByDate: Map<String, List<ForecastModel.ForecastItem>> = remember(data) {
+//        data.list.groupBy { it.dt_txt.substringBefore(" ") }
+//    }
+//
+//    // Sort dates chronologically
+//    val sortedDates = remember(groupedByDate) { groupedByDate.keys.sorted() }
+//
+//    LazyColumn(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(vertical = 8.dp)
+//    ) {
+//        sortedDates.forEach { date ->
+//            val dayItems = groupedByDate[date] ?: emptyList()
+//
+//            // Date header
+//            item {
+//                Text(
+//                    text = LocalDate.parse(date)
+//                        .format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+//                    color = Color.White,
+//                    fontSize = 18.sp,
+//                    fontWeight = FontWeight.SemiBold,
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .background(Color(0xFF3C2B8E))
+//                        .padding(vertical = 8.dp, horizontal = 16.dp)
+//                )
+//            }
+//
+//            // Horizontal list of forecasts
+//            item {
+//                LazyRow(
+//                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+//                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+//                ) {
+//                    items(dayItems) { item ->
+//                        ForecastCard(item)
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//private fun ForecastCard(item: ForecastModel.For) {
+//    Surface(
+//        shape = RoundedCornerShape(16.dp),
+//        tonalElevation = 6.dp,
+//        modifier = Modifier
+//            .size(width = 100.dp, height = 160.dp)
+//            .border(1.dp, Color.LightGray, RoundedCornerShape(16.dp))
+//    ) {
+//        Column(
+//            modifier = Modifier
+//                .background(Color(0xFF1B1B3A))
+//                .fillMaxSize()
+//                .padding(8.dp),
+//            verticalArrangement = Arrangement.SpaceBetween,
+//            horizontalAlignment = Alignment.CenterHorizontally
+//        ) {
+//            // Time label
+//            val time = item.dt_txt.substringAfter(" ").substringBeforeLast(":")
+//            Text(text = time, color = Color.White, fontSize = 14.sp)
+//
+//            // Weather icon
+//            AsyncImage(
+//                model = "https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png",
+//                contentDescription = item.weather[0].description,
+//                modifier = Modifier.size(48.dp)
+//            )
+//
+//            // Temperature
+//            Text(
+//                text = "${item.main.temp.roundToInt()}°",
+//                color = Color.White,
+//                fontSize = 16.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//
+//            // Short description
+//            Text(
+//                text = item.weather[0].description.replaceFirstChar { it.uppercase() },
+//                color = Color.LightGray,
+//                fontSize = 12.sp
+//            )
+//        }
+//    }
+

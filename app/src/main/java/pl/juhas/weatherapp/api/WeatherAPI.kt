@@ -5,10 +5,18 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherAPI {
+
     @GET("weather")
-    suspend fun getWeather(
+    suspend fun getCurrentWeather(
         @Query("q") city: String,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric",
     ) : Response<WeatherModel>
+
+    @GET("forecast")
+    suspend fun getForecast(
+        @Query("q") city: String,
+        @Query("appid") apiKey: String,
+        @Query("units") units: String = "metric",
+    ) : Response<ForecastModel>
 }
