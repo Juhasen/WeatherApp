@@ -5,13 +5,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -21,13 +24,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -47,14 +48,18 @@ import coil.compose.AsyncImage
 import pl.juhas.weatherapp.api.Forecast
 import pl.juhas.weatherapp.api.ForecastModel
 import pl.juhas.weatherapp.api.NetworkResponse
-import pl.juhas.weatherapp.api.Weather
 import pl.juhas.weatherapp.api.WeatherModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.unit.min
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
     var city by remember { mutableStateOf("") }
-
+    val navController = rememberNavController()
     val current by viewModel.currentWeatherResult.observeAsState()
     val forecast by viewModel.forecastResult.observeAsState()
 
@@ -68,11 +73,13 @@ fun WeatherPage(viewModel: WeatherViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(listOf(
-                    Color(0xFF1B1B3A),
-                    Color(0xFF3C2B8E),
-                    Color(0xFFA142F4)
-                ))
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF1B1B3A),
+                        Color(0xFF3C2B8E),
+                        Color(0xFFA142F4)
+                    )
+                )
             )
             .padding(16.dp)
     ) {
@@ -136,7 +143,7 @@ fun WeatherPage(viewModel: WeatherViewModel) {
 
             // Only when both are success, render the UI
             if (current is NetworkResponse.Success<*> && forecast is NetworkResponse.Success<*>) {
-                val currentModel  = (current as NetworkResponse.Success<*>).data as WeatherModel
+                val currentModel = (current as NetworkResponse.Success<*>).data as WeatherModel
                 val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
 
                 // Current weather
@@ -202,7 +209,7 @@ fun WeatherDetails(current: WeatherModel) {
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFFA142F4),
+                            Color(0xFFAF65FD),
                             Color(0xFF3C2B8E),
                             Color(0xFF1B1B3A)
                         ),
@@ -320,10 +327,6 @@ fun WeatherDetailsWithToggle(current: WeatherModel, forecast: ForecastModel) {
     }
 }
 
-@Composable
-fun ForecastView(x0: ForecastModel) {
-    Text("Forecast View", color = Color.White, fontSize = 18.sp)
-}
 
 @Composable
 fun DetailedInfo(x0: WeatherModel) {
@@ -331,96 +334,86 @@ fun DetailedInfo(x0: WeatherModel) {
 }
 
 
-//@Composable
-//fun ForecastView(data: ForecastModel) {
-//    // Group 3-hour entries by calendar date
-//    val groupedByDate: Map<String, List<ForecastModel.ForecastItem>> = remember(data) {
-//        data.list.groupBy { it.dt_txt.substringBefore(" ") }
-//    }
-//
-//    // Sort dates chronologically
-//    val sortedDates = remember(groupedByDate) { groupedByDate.keys.sorted() }
-//
-//    LazyColumn(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(vertical = 8.dp)
-//    ) {
-//        sortedDates.forEach { date ->
-//            val dayItems = groupedByDate[date] ?: emptyList()
-//
-//            // Date header
-//            item {
-//                Text(
-//                    text = LocalDate.parse(date)
-//                        .format(DateTimeFormatter.ofPattern("EEE, MMM d")),
-//                    color = Color.White,
-//                    fontSize = 18.sp,
-//                    fontWeight = FontWeight.SemiBold,
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .background(Color(0xFF3C2B8E))
-//                        .padding(vertical = 8.dp, horizontal = 16.dp)
-//                )
-//            }
-//
-//            // Horizontal list of forecasts
-//            item {
-//                LazyRow(
-//                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-//                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-//                ) {
-//                    items(dayItems) { item ->
-//                        ForecastCard(item)
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun ForecastCard(item: ForecastModel.For) {
-//    Surface(
-//        shape = RoundedCornerShape(16.dp),
-//        tonalElevation = 6.dp,
-//        modifier = Modifier
-//            .size(width = 100.dp, height = 160.dp)
-//            .border(1.dp, Color.LightGray, RoundedCornerShape(16.dp))
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .background(Color(0xFF1B1B3A))
-//                .fillMaxSize()
-//                .padding(8.dp),
-//            verticalArrangement = Arrangement.SpaceBetween,
-//            horizontalAlignment = Alignment.CenterHorizontally
-//        ) {
-//            // Time label
-//            val time = item.dt_txt.substringAfter(" ").substringBeforeLast(":")
-//            Text(text = time, color = Color.White, fontSize = 14.sp)
-//
-//            // Weather icon
-//            AsyncImage(
-//                model = "https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png",
-//                contentDescription = item.weather[0].description,
-//                modifier = Modifier.size(48.dp)
-//            )
-//
-//            // Temperature
-//            Text(
-//                text = "${item.main.temp.roundToInt()}°",
-//                color = Color.White,
-//                fontSize = 16.sp,
-//                fontWeight = FontWeight.Bold
-//            )
-//
-//            // Short description
-//            Text(
-//                text = item.weather[0].description.replaceFirstChar { it.uppercase() },
-//                color = Color.LightGray,
-//                fontSize = 12.sp
-//            )
-//        }
-//    }
+@Composable
+fun ForecastView(data: ForecastModel) {
+    // Group entries by date and pick target per day
+    val groupedByDate = remember(data) { data.list.groupBy { it.dt_txt.substringBefore(" ") } }
+    val sortedDates = remember(groupedByDate) { groupedByDate.keys.sorted() }
+
+    // Filter only 15:00 entries across all days
+    val dailyForecasts = remember(sortedDates) {
+        sortedDates.mapNotNull { date ->
+            groupedByDate[date]?.firstOrNull { it.dt_txt.endsWith("15:00:00") }
+        }
+    }
+
+    // Render all daily cards in a horizontal row
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(dailyForecasts) { forecastItem ->
+            ForecastCard(forecastItem)
+        }
+    }
+}
+
+@Composable
+private fun ForecastCard(item: Forecast) {
+    Surface(
+        shape = RoundedCornerShape(50.dp),
+        tonalElevation = 12.dp,
+        modifier = Modifier
+            .border(1.dp, Color.LightGray, RoundedCornerShape(50.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF3B2892),
+                            Color(0xFFA057A8),
+                        ),
+                    )
+                )
+                .padding(8.dp)
+                .padding(vertical = 20.dp)
+                .heightIn(min(150.dp, 200.dp)),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            // Temperature
+            Text(
+                text = "${item.main.temp.roundToInt()}°",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Weather icon
+            AsyncImage(
+                model = "https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png",
+                contentDescription = item.weather[0].description,
+                modifier = Modifier.size(64.dp)
+            )
+
+
+            //Day
+            val date = item.dt_txt.substringBefore(" ")
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val localDate = LocalDate.parse(date, formatter)
+            val dayOfWeek = localDate.dayOfWeek.name.take(3).uppercase()
+            Text(
+                text = dayOfWeek,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
 
