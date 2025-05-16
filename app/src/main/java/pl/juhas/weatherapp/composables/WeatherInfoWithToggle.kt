@@ -26,7 +26,8 @@ fun WeatherInfoWithToggle(current: WeatherModel, forecast: ForecastModel) {
 
     // Toggle buttons
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .padding(20.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         Button(
