@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import pl.juhas.weatherapp.R
 import pl.juhas.weatherapp.api.model.WeatherModel
+import pl.juhas.weatherapp.ui.theme.DarkPurple
+import pl.juhas.weatherapp.ui.theme.LightPurple
+import pl.juhas.weatherapp.ui.theme.Purple
 import kotlin.math.roundToInt
 
 @Composable
@@ -54,9 +57,9 @@ fun GeneralCurrentWeatherInfo(current: WeatherModel) {
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFFAF65FD),
-                            Color(0xFF3C2B8E),
-                            Color(0xFF1B1B3A)
+                            LightPurple,
+                            Purple,
+                            DarkPurple
                         ),
                         start = Offset(1000f, 0f),
                         end = Offset(0f, 1000f)

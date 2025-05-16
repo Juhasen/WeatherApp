@@ -26,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import pl.juhas.weatherapp.composables.FavouriteScreen
 import pl.juhas.weatherapp.composables.HomeScreen
 import pl.juhas.weatherapp.composables.SettingsScreen
+import pl.juhas.weatherapp.ui.theme.unselectedColor
 
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
@@ -61,7 +62,7 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                         FavouriteScreen()
                     }
                     composable("settings") {
-                        SettingsScreen()
+                        SettingsScreen(viewModel)
                     }
                 }
             }
@@ -81,9 +82,10 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     label = { Text("Home") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        unselectedIconColor = Color(0xFFB3A9D6),
+                        unselectedIconColor = unselectedColor,
                         selectedTextColor = Color.White,
-                        unselectedTextColor = Color(0xFFB3A9D6)
+                        unselectedTextColor = unselectedColor,
+                        indicatorColor = Color.Transparent
                     )
                 )
                 NavigationBarItem(
@@ -93,9 +95,10 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     label = { Text("Favourite") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        unselectedIconColor = Color(0xFFB3A9D6),
+                        unselectedIconColor = unselectedColor,
                         selectedTextColor = Color.White,
-                        unselectedTextColor = Color(0xFFB3A9D6)
+                        unselectedTextColor = unselectedColor,
+                        indicatorColor = Color.Transparent
                     )
                 )
                 NavigationBarItem(
@@ -105,9 +108,10 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     label = { Text("Settings") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        unselectedIconColor = Color(0xFFB3A9D6),
+                        unselectedIconColor = unselectedColor,
                         selectedTextColor = Color.White,
-                        unselectedTextColor = Color(0xFFB3A9D6)
+                        unselectedTextColor = unselectedColor,
+                        indicatorColor = Color.Transparent
                     )
                 )
             }

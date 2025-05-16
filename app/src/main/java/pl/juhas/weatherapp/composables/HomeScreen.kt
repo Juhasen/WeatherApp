@@ -34,6 +34,9 @@ import pl.juhas.weatherapp.WeatherViewModel
 import pl.juhas.weatherapp.api.NetworkResponse
 import pl.juhas.weatherapp.api.model.ForecastModel
 import pl.juhas.weatherapp.api.model.WeatherModel
+import pl.juhas.weatherapp.ui.theme.DarkPurple
+import pl.juhas.weatherapp.ui.theme.LightPurple
+import pl.juhas.weatherapp.ui.theme.Purple
 
 @Composable
 fun HomeScreen(viewModel: WeatherViewModel) {
@@ -52,9 +55,9 @@ fun HomeScreen(viewModel: WeatherViewModel) {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0xFF1B1B3A),
-                        Color(0xFF3C2B8E),
-                        Color(0xFFA142F4)
+                        DarkPurple,
+                        Purple,
+                        LightPurple
                     )
                 )
             ).padding(top = 20.dp)
@@ -98,7 +101,11 @@ fun HomeScreen(viewModel: WeatherViewModel) {
         }
 
         if (current is NetworkResponse.Loading || forecast is NetworkResponse.Loading) {
-            CircularProgressIndicator(color = Color.White)
+            CircularProgressIndicator(color = Color.White,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
             return
         }
 

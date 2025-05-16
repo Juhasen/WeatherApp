@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pl.juhas.weatherapp.api.model.WeatherModel
+import pl.juhas.weatherapp.ui.theme.DarkPurple
+import pl.juhas.weatherapp.ui.theme.LightPurple
+import pl.juhas.weatherapp.ui.theme.Purple
 
 @Composable
 fun DetailedWeatherInfo(current: WeatherModel) {
@@ -39,9 +42,9 @@ fun DetailedWeatherInfo(current: WeatherModel) {
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFFAF65FD),
-                            Color(0xFF3C2B8E),
-                            Color(0xFF1B1B3A)
+                            LightPurple,
+                            Purple,
+                            DarkPurple
                         ),
                         start = Offset(1000f, 0f),
                         end = Offset(0f, 1000f)

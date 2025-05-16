@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import pl.juhas.weatherapp.api.model.ForecastDay
+import pl.juhas.weatherapp.ui.theme.LightPurple
+import pl.juhas.weatherapp.ui.theme.Purple
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -36,7 +38,7 @@ fun ForecastCard(item: ForecastDay) {
             modifier = Modifier
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF3B2892), Color(0xFFA057A8)),
+                        colors = listOf(LightPurple, Purple),
                     )
                 )
                 .padding(8.dp)
