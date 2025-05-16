@@ -1,32 +1,19 @@
 package pl.juhas.weatherapp
 
-import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -37,25 +24,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import pl.juhas.weatherapp.api.model.Forecast
-import pl.juhas.weatherapp.api.model.ForecastModel
-import pl.juhas.weatherapp.api.NetworkResponse
-import pl.juhas.weatherapp.api.model.WeatherModel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
-import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.unit.min
 import androidx.navigation.compose.rememberNavController
+import pl.juhas.weatherapp.api.NetworkResponse
+import pl.juhas.weatherapp.api.model.ForecastModel
+import pl.juhas.weatherapp.api.model.WeatherModel
+import pl.juhas.weatherapp.composables.ErrorHandler
+import pl.juhas.weatherapp.composables.GeneralCurrentWeatherInfo
+import pl.juhas.weatherapp.composables.WeatherInfoWithToggle
 
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
@@ -148,10 +129,10 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                 val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
 
                 // Current weather
-                WeatherDetails(currentModel)
+                GeneralCurrentWeatherInfo(currentModel)
 
                 // The toggle that shows either details or forecast
-                WeatherDetailsWithToggle(currentModel, forecastModel)
+                WeatherInfoWithToggle(currentModel, forecastModel)
             } else {
                 // Initial placeholder
                 Box(
@@ -168,324 +149,3 @@ fun WeatherPage(viewModel: WeatherViewModel) {
         }
     }
 }
-
-
-@Composable
-fun ErrorHandler(errorMessage: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = errorMessage,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun WeatherDetails(current: WeatherModel) {
-
-
-    val iconUrl = "https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png"
-
-    Surface(
-        shape = RoundedCornerShape(30.dp),
-        tonalElevation = 15.dp,
-        shadowElevation = 15.dp,
-        modifier = Modifier
-            .padding(16.dp)
-            .border(
-                width = 2.dp,
-                color = Color.LightGray,
-                shape = RoundedCornerShape(30.dp)
-            )
-    ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFFAF65FD),
-                            Color(0xFF3C2B8E),
-                            Color(0xFF1B1B3A)
-                        ),
-                        start = Offset(1000f, 0f),
-                        end = Offset(0f, 1000f)
-                    )
-                )
-                .fillMaxWidth()
-                .padding(10.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Location
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.LocationOn,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "${current.name}, ${current.sys.country}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-
-                // Weather icon
-                AsyncImage(
-                    model = iconUrl,
-                    contentDescription = current.weather[0].description,
-                    modifier = Modifier.size(64.dp),
-                    placeholder = painterResource(R.drawable.ic_placeholder),
-                    error = painterResource(R.drawable.ic_error)
-                )
-
-                // Temperature
-                Text(
-                    text = "${current.main.temp.toFloat().roundToInt()}°",
-                    fontSize = 64.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                // Description
-                Text(
-                    text = current.weather[0].description.replaceFirstChar { it.uppercase() },
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun WeatherDetailsWithToggle(current: WeatherModel, forecast: ForecastModel) {
-    // 0 = Details, 1 = Forecast
-    var currentTab by remember { mutableStateOf(0) }
-
-
-    // Toggle buttons
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Button(
-            onClick = { currentTab = 0 },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (currentTab == 0) Color.White else Color.Gray.copy(alpha = 0.3f)
-            ),
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 4.dp)
-        ) {
-            Text("Forecast", color = Color.Black)
-        }
-        Button(
-            onClick = { currentTab = 1 },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (currentTab == 1) Color.White else Color.Gray.copy(alpha = 0.3f)
-            ),
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp)
-        ) {
-            Text("Details", color = Color.Black)
-        }
-    }
-
-    // Conditional content area
-    when (currentTab) {
-        0 -> ForecastView(forecast)
-        1 -> DetailedInfo(current)
-    }
-}
-
-
-@Composable
-fun DetailedInfo(current: WeatherModel) {
-    // Detailed info
-    Surface(
-        shape = RoundedCornerShape(30.dp),
-        tonalElevation = 15.dp,
-        shadowElevation = 15.dp,
-        modifier = Modifier
-            .padding(16.dp)
-            .border(
-                width = 2.dp,
-                color = Color.LightGray,
-                shape = RoundedCornerShape(30.dp)
-            )
-    ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFFAF65FD),
-                            Color(0xFF3C2B8E),
-                            Color(0xFF1B1B3A)
-                        ),
-                        start = Offset(1000f, 0f),
-                        end = Offset(0f, 1000f)
-                    )
-                )
-                .fillMaxWidth()
-                .padding(10.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Humidity
-                Text(
-                    text = "Humidity: ${current.main.humidity}%",
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-
-                // Wind speed
-                Text(
-                    text = "Wind Speed: ${current.wind.speed} m/s",
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-
-                // Pressure
-                Text(
-                    text = "Pressure: ${current.main.pressure} hPa",
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-        }
-    }
-
-}
-
-
-@Composable
-fun ForecastView(data: ForecastModel) {
-    val groupedByDate = remember(data) { data.list.groupBy { it.dt_txt.substringBefore(" ") } }
-    val sortedDates = remember(groupedByDate) { groupedByDate.keys.sorted() }
-
-    val dailyForecasts = remember(sortedDates) {
-        sortedDates.mapNotNull { date ->
-            val dayEntries = groupedByDate[date] ?: return@mapNotNull null
-            val maxTemp = dayEntries.maxOfOrNull { it.main.temp } ?: return@mapNotNull null
-
-            val nightTemps = dayEntries.filter {
-                it.dt_txt.endsWith("03:00:00")
-            }
-//          Log.d(Log.INFO.toString(), "Night temps: $nightTemps")
-            val minNightTemp = nightTemps.minOfOrNull { it.main.temp }
-
-            val targetEntry = dayEntries.firstOrNull { it.dt_txt.endsWith("15:00:00") }
-                ?: dayEntries.first()
-
-            ForecastDay(
-                data = targetEntry,
-                maxTemp = maxTemp.roundToInt(),
-                minTemp = minNightTemp?.roundToInt()
-            )
-        }
-    }
-
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(dailyForecasts) { forecastDay ->
-            ForecastCard(forecastDay)
-        }
-    }
-}
-
-data class ForecastDay(
-    val data: Forecast,
-    val maxTemp: Int,
-    val minTemp: Int?
-)
-
-@Composable
-private fun ForecastCard(item: ForecastDay) {
-    Surface(
-        shape = RoundedCornerShape(50.dp),
-        tonalElevation = 12.dp,
-        modifier = Modifier
-            .border(1.dp, Color.LightGray, RoundedCornerShape(50.dp))
-    ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF3B2892), Color(0xFFA057A8)),
-                    )
-                )
-                .padding(8.dp)
-                .padding(vertical = 20.dp)
-                .heightIn(min(150.dp, 200.dp)),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Max Temp
-            Text(
-                text = "${item.maxTemp}°",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            // Min Temp (night)
-            item.minTemp?.let {
-                Text(
-                    text = "${it}°",
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            // Weather Icon
-            AsyncImage(
-                model = "https://openweathermap.org/img/wn/${item.data.weather[0].icon}@2x.png",
-                contentDescription = item.data.weather[0].description,
-                modifier = Modifier.size(64.dp)
-            )
-
-            // Day
-            val date = item.data.dt_txt.substringBefore(" ")
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            val localDate = LocalDate.parse(date, formatter)
-            val dayOfWeek = localDate.dayOfWeek.name.take(3).uppercase()
-
-            Text(
-                text = dayOfWeek,
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
