@@ -22,6 +22,9 @@ import pl.juhas.weatherapp.api.model.WeatherModel
 import pl.juhas.weatherapp.ui.theme.DarkPurple
 import pl.juhas.weatherapp.ui.theme.LightPurple
 import pl.juhas.weatherapp.ui.theme.Purple
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DetailedWeatherInfo(current: WeatherModel) {
@@ -88,13 +91,17 @@ fun DetailedWeatherInfo(current: WeatherModel) {
                 )
                 // Sunrise
                 Text(
-                    text = "Sunrise: ${current.sys.sunrise}",
+                    text = "Sunrise: ${
+                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(current.sys.sunrise * 1000L))
+                    }",
                     fontSize = 18.sp,
                     color = Color.White
                 )
                 // Sunset
                 Text(
-                    text = "Sunset: ${current.sys.sunset}",
+                    text = "Sunset: ${
+                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(current.sys.sunset * 1000L))
+                    }",
                     fontSize = 18.sp,
                     color = Color.White
                 )
