@@ -80,6 +80,24 @@ fun DetailedWeatherInfo(current: WeatherModel) {
                     fontSize = 18.sp,
                     color = Color.White
                 )
+                // Visibility
+                Text(
+                    text = "Visibility: ${current.visibility / 1000} km",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+                // Sunrise
+                Text(
+                    text = "Sunrise: ${current.sys.sunrise}",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+                // Sunset
+                Text(
+                    text = "Sunset: ${current.sys.sunset}",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
             }
         }
     }

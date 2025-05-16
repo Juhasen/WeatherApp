@@ -74,7 +74,7 @@ fun ToggleButtonGroup(
                 onClick = { onOptionSelected(option) },
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSelected) Purple else DarkPurple,
+                    containerColor = if (isSelected) LightPurple else DarkPurple,
                     contentColor = Color.White
                 ),
                 border = BorderStroke(

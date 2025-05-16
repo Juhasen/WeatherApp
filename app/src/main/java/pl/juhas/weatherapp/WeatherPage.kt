@@ -26,6 +26,9 @@ import androidx.navigation.compose.rememberNavController
 import pl.juhas.weatherapp.composables.FavouriteScreen
 import pl.juhas.weatherapp.composables.HomeScreen
 import pl.juhas.weatherapp.composables.SettingsScreen
+import pl.juhas.weatherapp.ui.theme.DarkPurple
+import pl.juhas.weatherapp.ui.theme.LightPurple
+import pl.juhas.weatherapp.ui.theme.Purple
 import pl.juhas.weatherapp.ui.theme.unselectedColor
 
 @Composable
@@ -38,9 +41,9 @@ fun WeatherPage(viewModel: WeatherViewModel) {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0xFF1B1B3A),
-                        Color(0xFF3C2B8E),
-                        Color(0xFFA142F4)
+                        DarkPurple,
+                        Purple,
+                        LightPurple
                     )
                 )
             )
@@ -72,7 +75,7 @@ fun WeatherPage(viewModel: WeatherViewModel) {
             val currentRoute = navBackStackEntry?.destination?.route
 
             NavigationBar(
-                containerColor = Color(0xFF3C2B8E),
+                containerColor = Purple,
                 contentColor = Color.White
             ) {
                 NavigationBarItem(

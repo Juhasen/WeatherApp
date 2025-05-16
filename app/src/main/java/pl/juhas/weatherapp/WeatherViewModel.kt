@@ -24,7 +24,7 @@ class WeatherViewModel : ViewModel() {
         policy = structuralEqualityPolicy()
     )
 
-    private var lastCity: String = ""
+    private var lastCity: String = "Warszawa"
 
     private val _currentWeatherResult = MutableLiveData<NetworkResponse<WeatherModel>>()
     val currentWeatherResult: LiveData<NetworkResponse<WeatherModel>> = _currentWeatherResult
