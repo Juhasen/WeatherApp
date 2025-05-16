@@ -1,4 +1,6 @@
-package pl.juhas.weatherapp.api
+package pl.juhas.weatherapp.api.model
+
+import pl.juhas.weatherapp.api.model.Wind
 
 data class Forecast(
     val clouds: Clouds,

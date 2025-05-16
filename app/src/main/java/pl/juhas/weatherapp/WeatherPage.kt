@@ -1,5 +1,6 @@
 package pl.juhas.weatherapp
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -45,10 +46,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import pl.juhas.weatherapp.api.Forecast
-import pl.juhas.weatherapp.api.ForecastModel
+import pl.juhas.weatherapp.api.model.Forecast
+import pl.juhas.weatherapp.api.model.ForecastModel
 import pl.juhas.weatherapp.api.NetworkResponse
-import pl.juhas.weatherapp.api.WeatherModel
+import pl.juhas.weatherapp.api.model.WeatherModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -267,19 +268,6 @@ fun WeatherDetails(current: WeatherModel) {
                     fontSize = 18.sp,
                     color = Color.White
                 )
-
-                //Refresh date
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                )
-                {
-                    Text(
-                        text = "Last updated: ${current.dt}",
-                        fontSize = 14.sp,
-                        color = Color.White
-                    )
-                }
             }
         }
     }
@@ -305,7 +293,7 @@ fun WeatherDetailsWithToggle(current: WeatherModel, forecast: ForecastModel) {
                 .weight(1f)
                 .padding(end = 4.dp)
         ) {
-            Text("Details", color = Color.Black)
+            Text("Forecast", color = Color.Black)
         }
         Button(
             onClick = { currentTab = 1 },
@@ -316,38 +304,110 @@ fun WeatherDetailsWithToggle(current: WeatherModel, forecast: ForecastModel) {
                 .weight(1f)
                 .padding(start = 4.dp)
         ) {
-            Text("Forecast", color = Color.Black)
+            Text("Details", color = Color.Black)
         }
     }
 
     // Conditional content area
     when (currentTab) {
-        0 -> DetailedInfo(current)
-        1 -> ForecastView(forecast)
+        0 -> ForecastView(forecast)
+        1 -> DetailedInfo(current)
     }
 }
 
 
 @Composable
-fun DetailedInfo(x0: WeatherModel) {
-    Text("Detailed Info", color = Color.White, fontSize = 18.sp)
+fun DetailedInfo(current: WeatherModel) {
+    // Detailed info
+    Surface(
+        shape = RoundedCornerShape(30.dp),
+        tonalElevation = 15.dp,
+        shadowElevation = 15.dp,
+        modifier = Modifier
+            .padding(16.dp)
+            .border(
+                width = 2.dp,
+                color = Color.LightGray,
+                shape = RoundedCornerShape(30.dp)
+            )
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFFAF65FD),
+                            Color(0xFF3C2B8E),
+                            Color(0xFF1B1B3A)
+                        ),
+                        start = Offset(1000f, 0f),
+                        end = Offset(0f, 1000f)
+                    )
+                )
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Humidity
+                Text(
+                    text = "Humidity: ${current.main.humidity}%",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+
+                // Wind speed
+                Text(
+                    text = "Wind Speed: ${current.wind.speed} m/s",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+
+                // Pressure
+                Text(
+                    text = "Pressure: ${current.main.pressure} hPa",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+            }
+        }
+    }
+
 }
 
 
 @Composable
 fun ForecastView(data: ForecastModel) {
-    // Group entries by date and pick target per day
     val groupedByDate = remember(data) { data.list.groupBy { it.dt_txt.substringBefore(" ") } }
     val sortedDates = remember(groupedByDate) { groupedByDate.keys.sorted() }
 
-    // Filter only 15:00 entries across all days
     val dailyForecasts = remember(sortedDates) {
         sortedDates.mapNotNull { date ->
-            groupedByDate[date]?.firstOrNull { it.dt_txt.endsWith("15:00:00") }
+            val dayEntries = groupedByDate[date] ?: return@mapNotNull null
+            val maxTemp = dayEntries.maxOfOrNull { it.main.temp } ?: return@mapNotNull null
+
+            val nightTemps = dayEntries.filter {
+                it.dt_txt.endsWith("03:00:00")
+            }
+//          Log.d(Log.INFO.toString(), "Night temps: $nightTemps")
+            val minNightTemp = nightTemps.minOfOrNull { it.main.temp }
+
+            val targetEntry = dayEntries.firstOrNull { it.dt_txt.endsWith("15:00:00") }
+                ?: dayEntries.first()
+
+            ForecastDay(
+                data = targetEntry,
+                maxTemp = maxTemp.roundToInt(),
+                minTemp = minNightTemp?.roundToInt()
+            )
         }
     }
 
-    // Render all daily cards in a horizontal row
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -355,14 +415,20 @@ fun ForecastView(data: ForecastModel) {
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(dailyForecasts) { forecastItem ->
-            ForecastCard(forecastItem)
+        items(dailyForecasts) { forecastDay ->
+            ForecastCard(forecastDay)
         }
     }
 }
 
+data class ForecastDay(
+    val data: Forecast,
+    val maxTemp: Int,
+    val minTemp: Int?
+)
+
 @Composable
-private fun ForecastCard(item: Forecast) {
+private fun ForecastCard(item: ForecastDay) {
     Surface(
         shape = RoundedCornerShape(50.dp),
         tonalElevation = 12.dp,
@@ -373,10 +439,7 @@ private fun ForecastCard(item: Forecast) {
             modifier = Modifier
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF3B2892),
-                            Color(0xFFA057A8),
-                        ),
+                        colors = listOf(Color(0xFF3B2892), Color(0xFFA057A8)),
                     )
                 )
                 .padding(8.dp)
@@ -385,28 +448,37 @@ private fun ForecastCard(item: Forecast) {
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // Temperature
+            // Max Temp
             Text(
-                text = "${item.main.temp.roundToInt()}°",
+                text = "${item.maxTemp}°",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // Weather icon
+            // Min Temp (night)
+            item.minTemp?.let {
+                Text(
+                    text = "${it}°",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            // Weather Icon
             AsyncImage(
-                model = "https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png",
-                contentDescription = item.weather[0].description,
+                model = "https://openweathermap.org/img/wn/${item.data.weather[0].icon}@2x.png",
+                contentDescription = item.data.weather[0].description,
                 modifier = Modifier.size(64.dp)
             )
 
-
-            //Day
-            val date = item.dt_txt.substringBefore(" ")
+            // Day
+            val date = item.data.dt_txt.substringBefore(" ")
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             val localDate = LocalDate.parse(date, formatter)
             val dayOfWeek = localDate.dayOfWeek.name.take(3).uppercase()
+
             Text(
                 text = dayOfWeek,
                 color = Color.White,

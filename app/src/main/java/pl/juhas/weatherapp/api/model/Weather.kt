@@ -1,4 +1,4 @@
-package pl.juhas.weatherapp.api
+package pl.juhas.weatherapp.api.model
 
 data class Weather(
     val description: String,

@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import pl.juhas.weatherapp.api.RetrofitInstance
 import pl.juhas.weatherapp.api.Constant
-import pl.juhas.weatherapp.api.ForecastModel
+import pl.juhas.weatherapp.api.model.ForecastModel
 import pl.juhas.weatherapp.api.NetworkResponse
-import pl.juhas.weatherapp.api.WeatherModel
+import pl.juhas.weatherapp.api.model.WeatherModel
 
 class WeatherViewModel :ViewModel() {
 
