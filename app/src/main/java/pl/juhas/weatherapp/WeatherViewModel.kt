@@ -22,6 +22,16 @@ class WeatherViewModel : ViewModel() {
     private val weatherApi = RetrofitInstance.weatherAPI
     private val geoApi = RetrofitInstance.geoAPI
 
+    var lastLon by mutableStateOf(
+        value = "0.0",
+        policy = structuralEqualityPolicy()
+    )
+
+    var lastLat by mutableStateOf(
+        value = "0.0",
+        policy = structuralEqualityPolicy()
+    )
+
     var unit by mutableStateOf(
         value = "Metric",
         policy = structuralEqualityPolicy()
@@ -39,6 +49,7 @@ class WeatherViewModel : ViewModel() {
 
     fun updateUnit(newUnit: String) { // Zmieniono nazwę metody
         unit = newUnit
+        refreshWeatherData()
     }
 
     fun getGeoLocation(city: String) {
@@ -63,17 +74,19 @@ class WeatherViewModel : ViewModel() {
         }
     }
 
-//    private fun refreshWeatherData() {
-//        viewModelScope.launch {
-//            // Ponownie załaduj dane pogodowe z nową jednostką
-//            _currentWeatherResult.value = NetworkResponse.Loading
-//            _forecastResult.value = NetworkResponse.Loading
-//            getCurrentWeather(lastCity)
-//            getForecast(lastCity)
-//        }
-//    }
+    private fun refreshWeatherData() {
+        viewModelScope.launch {
+            _currentWeatherResult.value = NetworkResponse.Loading
+            _forecastResult.value = NetworkResponse.Loading
+            getCurrentWeather(lastLat, lastLon)
+            getForecast(lastLat, lastLon)
+        }
+    }
 
     fun getCurrentWeather(lat: String, lon: String) {
+        lastLat = lat
+        lastLon = lon
+
         viewModelScope.launch {
             _currentWeatherResult.value = NetworkResponse.Loading
             try {

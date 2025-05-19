@@ -1,7 +1,10 @@
 package pl.juhas.weatherapp.screens
 
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -28,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -116,38 +121,72 @@ fun HomeScreen(viewModel: WeatherViewModel) {
             )
         }
 
+        val context = LocalContext.current
         if (showSuggestions && cityOptions is NetworkResponse.Success<*>) {
             val rawCities = (cityOptions as NetworkResponse.Success<*>).data as List<GeoLocationModelItem>
             val cities = rawCities.distinctBy { "${it.name}-${it.country}-${it.state}"}
-
+            if(cities.isEmpty()) {
+                Toast.makeText(context, "No results found", Toast.LENGTH_SHORT).show()
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(1f)
             ) {
-                androidx.compose.foundation.lazy.LazyColumn(
+                LazyColumn(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .background(Color.Black.copy(alpha = 0.85f))
+                        .border(
+                            width = 2.dp,
+                            color = Color.LightGray,
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .background(Color.Black.copy(alpha = 0.1f))
+                        .padding(vertical = 16.dp)
                 ) {
+
+                    val gradientBrush = Brush.horizontalGradient(
+                        colors = listOf(Purple, LightPurple),
+                        tileMode = TileMode.Clamp
+                    )
+
                     items(cities.size) { index ->
-//                        Log.d("CITY OPTIONS", cities.joinToString("\n") { "${it.name}, ${it.state}, ${it.country} -> ${it.lat}, ${it.lon}" })
                         val city = cities[index]
-                        Text(
-                            text = "${city.name}, ${city.country}, ${city.state}, ${city.lat}, ${city.lon}",
-                            color = Color.White,
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .background(Color(0x33000000), RoundedCornerShape(4.dp))
-                                .padding(12.dp)
+                                .background(brush = gradientBrush, shape = RoundedCornerShape(20.dp))
                                 .clickable {
                                     Log.i("Coords of CITY", "HomeScreen: ${city.lat}, ${city.lon}")
                                     load(city.lat.toString(), city.lon.toString())
                                     localCity = "${city.name}, ${city.country}, ${city.state}"
                                     showSuggestions = false
                                 }
-                        )
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                val cityName = if (city.state != null) {
+                                    "${city.name}, ${city.state}, ${city.country}"
+                                } else {
+                                    "${city.name}, ${city.country}"
+                                }
+                                Text(
+                                    text = cityName,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
             }
