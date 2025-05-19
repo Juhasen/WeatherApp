@@ -23,9 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import pl.juhas.weatherapp.composables.FavouriteScreen
-import pl.juhas.weatherapp.composables.HomeScreen
-import pl.juhas.weatherapp.composables.SettingsScreen
+import pl.juhas.weatherapp.screens.FavouriteScreen
+import pl.juhas.weatherapp.screens.HomeScreen
+import pl.juhas.weatherapp.screens.SettingsScreen
 import pl.juhas.weatherapp.ui.theme.DarkPurple
 import pl.juhas.weatherapp.ui.theme.LightPurple
 import pl.juhas.weatherapp.ui.theme.Purple

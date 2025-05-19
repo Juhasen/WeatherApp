@@ -1,4 +1,4 @@
-package pl.juhas.weatherapp.composables
+package pl.juhas.weatherapp.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -19,6 +19,11 @@ import pl.juhas.weatherapp.ui.theme.Purple
 
 @Composable
 fun SettingsScreen(viewModel: WeatherViewModel) {
+    val unitMap = mapOf(
+        "Metric (°C)" to "metric",
+        "Standard (°K)" to "standard",
+        "Imperial (°F)" to "imperial"
+    )
     var selectedUnit by remember { mutableStateOf(viewModel.unit) }
 
     Column(
@@ -46,11 +51,11 @@ fun SettingsScreen(viewModel: WeatherViewModel) {
         Spacer(modifier = Modifier.height(24.dp))
 
         ToggleButtonGroup(
-            options = listOf("Metric", "Standard", "Imperial"),
-            selectedOption = selectedUnit,
-            onOptionSelected = {
-                selectedUnit = it
-                viewModel.updateUnit(it)
+            options = unitMap.keys.toList(),
+            selectedOption = unitMap.entries.find { it.value == selectedUnit }?.key ?: "",
+            onOptionSelected = { selectedKey ->
+                selectedUnit = unitMap[selectedKey] ?: "metric"
+                viewModel.updateUnit(selectedUnit)
             }
         )
     }
