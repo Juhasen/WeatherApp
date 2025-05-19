@@ -24,7 +24,9 @@ fun SettingsScreen(viewModel: WeatherViewModel) {
         "Standard (°K)" to "standard",
         "Imperial (°F)" to "imperial"
     )
-    var selectedUnit by remember { mutableStateOf(viewModel.unit) }
+
+    val initialSelectedKey = unitMap.entries.find { it.value == viewModel.unit }?.key ?: "Metric (°C)"
+    var selectedUnit by remember { mutableStateOf(initialSelectedKey) }
 
     Column(
         modifier = Modifier
@@ -52,10 +54,10 @@ fun SettingsScreen(viewModel: WeatherViewModel) {
 
         ToggleButtonGroup(
             options = unitMap.keys.toList(),
-            selectedOption = unitMap.entries.find { it.value == selectedUnit }?.key ?: "",
+            selectedOption = selectedUnit,
             onOptionSelected = { selectedKey ->
-                selectedUnit = unitMap[selectedKey] ?: "metric"
-                viewModel.updateUnit(selectedUnit)
+                selectedUnit = selectedKey
+                viewModel.updateUnit(unitMap[selectedKey] ?: "metric")
             }
         )
     }

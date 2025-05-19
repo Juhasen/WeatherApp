@@ -81,7 +81,7 @@ fun HomeScreen(viewModel: WeatherViewModel) {
                 )
             )
             .padding(top = 20.dp)
-    ){
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +111,7 @@ fun HomeScreen(viewModel: WeatherViewModel) {
                 ),
                 trailingIcon = {
                     IconButton(onClick = {
-                        Log.i("SZUKANIE MIASTA","HomeScreen: $localCity")
+                        Log.i("SZUKANIE MIASTA", "HomeScreen: $localCity")
                         previewCityOptionsLoad(localCity)
                         showSuggestions = true
                     }) {
@@ -124,8 +124,8 @@ fun HomeScreen(viewModel: WeatherViewModel) {
         val context = LocalContext.current
         if (showSuggestions && cityOptions is NetworkResponse.Success<*>) {
             val rawCities = (cityOptions as NetworkResponse.Success<*>).data as List<GeoLocationModelItem>
-            val cities = rawCities.distinctBy { "${it.name}-${it.country}-${it.state}"}
-            if(cities.isEmpty()) {
+            val cities = rawCities.distinctBy { "${it.name}-${it.country}-${it.state}" }
+            if (cities.isEmpty()) {
                 Toast.makeText(context, "No results found", Toast.LENGTH_SHORT).show()
             }
             Box(
@@ -193,7 +193,8 @@ fun HomeScreen(viewModel: WeatherViewModel) {
         }
 
         if (current is NetworkResponse.Loading || forecast is NetworkResponse.Loading) {
-            CircularProgressIndicator(color = Color.White,
+            CircularProgressIndicator(
+                color = Color.White,
                 modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.CenterHorizontally)
@@ -215,7 +216,13 @@ fun HomeScreen(viewModel: WeatherViewModel) {
             val currentModel = (current as NetworkResponse.Success<*>).data as WeatherModel
             val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
 
-            GeneralCurrentWeatherInfo(currentModel)
+            GeneralCurrentWeatherInfo(
+                currentModel,
+                isFavorite = true,
+                onAddToFavorites = {
+                    Log.d("WeatherApp", "Added to favorites: ${currentModel.name}")
+                },
+            )
             WeatherInfoWithToggle(currentModel, forecastModel)
         } else {
             Box(
@@ -230,5 +237,4 @@ fun HomeScreen(viewModel: WeatherViewModel) {
             }
         }
     }
-
 }

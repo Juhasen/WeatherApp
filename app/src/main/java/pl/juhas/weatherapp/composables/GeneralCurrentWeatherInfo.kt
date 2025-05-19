@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,8 +38,11 @@ import pl.juhas.weatherapp.ui.theme.Purple
 import kotlin.math.roundToInt
 
 @Composable
-fun GeneralCurrentWeatherInfo(current: WeatherModel) {
-
+fun GeneralCurrentWeatherInfo(
+    current: WeatherModel,
+    isFavorite: Boolean,
+    onAddToFavorites: () -> Unit // callback
+) {
     val iconUrl = "https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png"
 
     Surface(
@@ -68,10 +73,22 @@ fun GeneralCurrentWeatherInfo(current: WeatherModel) {
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
+            // Top-left IconButton
+            IconButton(
+                onClick = onAddToFavorites,
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Add to favorites",
+                    tint = if (isFavorite) Color.Magenta else Color.White,
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
