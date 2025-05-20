@@ -19,10 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import pl.juhas.weatherapp.screens.FavouriteScreen
 import pl.juhas.weatherapp.screens.HomeScreen
 import pl.juhas.weatherapp.screens.SettingsScreen
@@ -62,10 +64,21 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                         HomeScreen(viewModel)
                     }
                     composable("favourite") {
-                        FavouriteScreen()
+                        FavouriteScreen(viewModel, navController)
                     }
                     composable("settings") {
                         SettingsScreen(viewModel)
+                    }
+                    composable(
+                        route = "home/{lat}/{lon}/{city}/{country}",
+                        arguments = listOf(
+                            navArgument("lat") { type = NavType.StringType },
+                            navArgument("lon") { type = NavType.StringType },
+                            navArgument("city") { type = NavType.StringType },
+                            navArgument("country") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        HomeScreen(viewModel = viewModel, backStackEntry = backStackEntry)
                     }
                 }
             }

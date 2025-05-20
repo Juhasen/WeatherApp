@@ -20,6 +20,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,8 +31,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.getValue
 import coil.compose.AsyncImage
+import pl.juhas.weatherapp.FavoritePlace
 import pl.juhas.weatherapp.R
+import pl.juhas.weatherapp.WeatherViewModel
 import pl.juhas.weatherapp.api.model.WeatherModel
 import pl.juhas.weatherapp.ui.theme.DarkPurple
 import pl.juhas.weatherapp.ui.theme.LightPurple
@@ -40,10 +45,18 @@ import kotlin.math.roundToInt
 @Composable
 fun GeneralCurrentWeatherInfo(
     current: WeatherModel,
-    isFavorite: Boolean,
-    onAddToFavorites: () -> Unit // callback
+    viewModel: WeatherViewModel,
 ) {
     val iconUrl = "https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png"
+
+    // Observe favorite places from ViewModel
+    val favoritePlacesCollection: Collection<FavoritePlace> by
+    viewModel.favoritePlaces.collectAsState(initial = emptyList())
+
+    val isFavorite = favoritePlacesCollection.any {
+        it.name == current.name && it.country == current.sys.country &&
+        it.lat == current.coord.lat && it.lon == current.coord.lon
+    }
 
     Surface(
         shape = RoundedCornerShape(30.dp),
@@ -75,15 +88,33 @@ fun GeneralCurrentWeatherInfo(
         ) {
             // Top-left IconButton
             IconButton(
-                onClick = onAddToFavorites,
+                onClick = {
+                    if (isFavorite) {
+                        viewModel.removeFavoritePlace(
+                            current.name,
+                            current.sys.country,
+                            current.coord.lat,
+                            current.coord.lon
+                        )
+                    } else {
+                        viewModel.addFavoritePlace(
+                            current.name,
+                            current.sys.country,
+                            current.coord.lat,
+                            current.coord.lon
+                        )
+                    }
+                },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Add to favorites",
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (isFavorite) Color.Magenta else Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
             }
+
 
             Column(
                 modifier = Modifier

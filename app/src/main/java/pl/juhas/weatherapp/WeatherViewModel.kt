@@ -1,6 +1,6 @@
 package pl.juhas.weatherapp
 
-import android.util.Log
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,18 +9,21 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import pl.juhas.weatherapp.api.RetrofitInstance
 import pl.juhas.weatherapp.api.Constant
-import pl.juhas.weatherapp.api.model.ForecastModel
 import pl.juhas.weatherapp.api.NetworkResponse
+import pl.juhas.weatherapp.api.RetrofitInstance
+import pl.juhas.weatherapp.api.model.ForecastModel
 import pl.juhas.weatherapp.api.model.GeoLocationModel
 import pl.juhas.weatherapp.api.model.WeatherModel
 
-class WeatherViewModel : ViewModel() {
+class WeatherViewModel(context: Context) : ViewModel() {
 
     private val weatherApi = RetrofitInstance.weatherAPI
     private val geoApi = RetrofitInstance.geoAPI
+    private val preferencesManager = PreferencesManager(context)
 
     var lastLon by mutableStateOf(
         value = "0.0",
@@ -46,8 +49,39 @@ class WeatherViewModel : ViewModel() {
     private val _geoLocationResult = MutableLiveData<NetworkResponse<GeoLocationModel>>()
     val geoLocationResult: LiveData<NetworkResponse<GeoLocationModel>> = _geoLocationResult
 
+    private val _favoritePlaces = MutableStateFlow<List<FavoritePlace>>(emptyList())
+    val favoritePlaces: StateFlow<List<FavoritePlace>> = _favoritePlaces
 
-    fun updateUnit(newUnit: String) { // Zmieniono nazwę metody
+    init {
+        viewModelScope.launch {
+            preferencesManager.favoritePlacesFlow
+                .collect { places ->
+                    _favoritePlaces.value = places
+                }
+        }
+    }
+
+    private fun refreshFavoritePlaces() {
+        _favoritePlaces.value = preferencesManager.getFavoritePlaces()
+    }
+
+    fun addFavoritePlace(name: String, country: String, lat: Double, lon: Double) {
+        viewModelScope.launch {
+            val place = FavoritePlace(name, country, lat, lon)
+            preferencesManager.addFavoritePlace(place)
+            refreshFavoritePlaces()
+        }
+    }
+
+    fun removeFavoritePlace(name: String, country: String, lat: Double, lon: Double) {
+        viewModelScope.launch {
+            val place = FavoritePlace(name, country, lat, lon)
+            preferencesManager.removeFavoritePlace(place)
+            refreshFavoritePlaces()
+        }
+    }
+
+    fun updateUnit(newUnit: String) {
         unit = newUnit
         refreshWeatherData()
     }
@@ -57,19 +91,23 @@ class WeatherViewModel : ViewModel() {
             _geoLocationResult.value = NetworkResponse.Loading
             try {
                 val response = geoApi.getGeoLocation(city, Constant.apiKey)
-                Log.i("GEO RESULT", response.toString())
                 if (response.isSuccessful) {
                     response.body()?.let {
                         _geoLocationResult.value = NetworkResponse.Success(it)
+                        val location = it.firstOrNull()
+                        if (location != null) {
+                            getCurrentWeather(location.lat.toString(), location.lon.toString())
+                            getForecast(location.lat.toString(), location.lon.toString())
+                        }
                     } ?: run {
                         _geoLocationResult.value = NetworkResponse.Error("No data found")
                     }
                 } else {
-                    _geoLocationResult.value = NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
+                    _geoLocationResult.value =
+                        NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
                 }
             } catch (e: Exception) {
                 _geoLocationResult.value = NetworkResponse.Error("Error: Failed to fetch data.")
-
             }
         }
     }
@@ -98,7 +136,8 @@ class WeatherViewModel : ViewModel() {
                         _currentWeatherResult.value = NetworkResponse.Error("No data found")
                     }
                 } else {
-                    _currentWeatherResult.value = NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
+                    _currentWeatherResult.value =
+                        NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
                 }
             } catch (e: Exception) {
                 _currentWeatherResult.value = NetworkResponse.Error("Error: Failed to fetch data.")
@@ -118,7 +157,8 @@ class WeatherViewModel : ViewModel() {
                         _forecastResult.value = NetworkResponse.Error("No data found")
                     }
                 } else {
-                    _forecastResult.value = NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
+                    _forecastResult.value =
+                        NetworkResponse.Error("Error: ${response.code()}. Failed to fetch data.")
                 }
             } catch (e: Exception) {
                 _forecastResult.value = NetworkResponse.Error("Error: Failed to fetch data.")

@@ -38,10 +38,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.navigation.NavBackStackEntry
 import pl.juhas.weatherapp.WeatherViewModel
 import pl.juhas.weatherapp.api.NetworkResponse
 import pl.juhas.weatherapp.api.model.ForecastModel
-import pl.juhas.weatherapp.api.model.GeoLocationModel
 import pl.juhas.weatherapp.api.model.GeoLocationModelItem
 import pl.juhas.weatherapp.api.model.WeatherModel
 import pl.juhas.weatherapp.composables.ErrorHandler
@@ -52,9 +52,22 @@ import pl.juhas.weatherapp.ui.theme.LightPurple
 import pl.juhas.weatherapp.ui.theme.Purple
 
 @Composable
-fun HomeScreen(viewModel: WeatherViewModel) {
+fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? = null) {
     var localCity by remember { mutableStateOf("") }
     var showSuggestions by remember { mutableStateOf(false) }
+
+    // Pobierz szerokość, długość geograficzną, nazwę miasta i kraj z argumentów nawigacji
+    val latFromNav = backStackEntry?.arguments?.getString("lat")
+    val lonFromNav = backStackEntry?.arguments?.getString("lon")
+    val cityNameFromNav = backStackEntry?.arguments?.getString("city")
+    val countryFromNav = backStackEntry?.arguments?.getString("country")
+
+    // Załaduj dane pogodowe tylko raz, gdy lat/lon są przekazane
+    if (!latFromNav.isNullOrEmpty() && !lonFromNav.isNullOrEmpty() && localCity.isEmpty()) {
+        viewModel.getCurrentWeather(latFromNav, lonFromNav)
+        viewModel.getForecast(latFromNav, lonFromNav)
+        localCity = "$cityNameFromNav, $countryFromNav"
+    }
 
     fun load(lat: String, lon: String) {
         viewModel.getCurrentWeather(lat, lon)
@@ -218,10 +231,7 @@ fun HomeScreen(viewModel: WeatherViewModel) {
 
             GeneralCurrentWeatherInfo(
                 currentModel,
-                isFavorite = true,
-                onAddToFavorites = {
-                    Log.d("WeatherApp", "Added to favorites: ${currentModel.name}")
-                },
+                viewModel = viewModel
             )
             WeatherInfoWithToggle(currentModel, forecastModel)
         } else {
