@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.google.gson.Gson
 import pl.juhas.weatherapp.api.Constant
 import pl.juhas.weatherapp.api.NetworkResponse
 import pl.juhas.weatherapp.api.RetrofitInstance
@@ -20,7 +21,7 @@ import pl.juhas.weatherapp.api.model.GeoLocationModel
 import pl.juhas.weatherapp.api.model.WeatherModel
 
 class WeatherViewModel(context: Context) : ViewModel() {
-
+    private val gson = Gson()
     private val weatherApi = RetrofitInstance.weatherAPI
     private val geoApi = RetrofitInstance.geoAPI
     private val preferencesManager = PreferencesManager(context)
@@ -52,11 +53,17 @@ class WeatherViewModel(context: Context) : ViewModel() {
     private val _favoritePlaces = MutableStateFlow<List<FavoritePlace>>(emptyList())
     val favoritePlaces: StateFlow<List<FavoritePlace>> = _favoritePlaces
 
+    private val _favoriteWeatherData = MutableStateFlow<Map<String, WeatherModel>>(emptyMap())
+    val favoriteWeatherData: StateFlow<Map<String, WeatherModel>> = _favoriteWeatherData
+
     init {
+        // Wczytaj preferowaną jednostkę z SharedPreferences
+        unit = preferencesManager.getUnitPreference()
         viewModelScope.launch {
             preferencesManager.favoritePlacesFlow
                 .collect { places ->
                     _favoritePlaces.value = places
+                    fetchWeatherForFavorites() // Pobierz dane pogodowe dla ulubionych miejsc
                 }
         }
     }
@@ -83,6 +90,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
 
     fun updateUnit(newUnit: String) {
         unit = newUnit
+        preferencesManager.saveUnitPreference(newUnit) // Zapisz preferencję w SharedPreferences
         refreshWeatherData()
     }
 
@@ -163,6 +171,33 @@ class WeatherViewModel(context: Context) : ViewModel() {
             } catch (e: Exception) {
                 _forecastResult.value = NetworkResponse.Error("Error: Failed to fetch data.")
             }
+        }
+    }
+
+    fun fetchWeatherForFavorites() {
+        viewModelScope.launch {
+            val favoritePlaces = preferencesManager.getFavoritePlaces()
+            val weatherDataMap = mutableMapOf<String, WeatherModel>()
+
+            favoritePlaces.forEach { place ->
+                try {
+                    val response = weatherApi.getCurrentWeather(
+                        place.lat.toString(),
+                        place.lon.toString(),
+                        Constant.apiKey,
+                        unit
+                    )
+                    if (response.isSuccessful) {
+                        response.body()?.let { weatherModel ->
+                            weatherDataMap[place.name] = weatherModel
+                            preferencesManager.saveWeatherData(place.name, gson.toJson(weatherModel))
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Obsługa błędów
+                }
+            }
+            _favoriteWeatherData.value = weatherDataMap
         }
     }
 }

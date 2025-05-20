@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ import pl.juhas.weatherapp.ui.theme.Purple
 
 @Composable
 fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? = null) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     var localCity by remember { mutableStateOf("") }
     var showSuggestions by remember { mutableStateOf(false) }
 
@@ -171,9 +173,13 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .background(brush = gradientBrush, shape = RoundedCornerShape(20.dp))
                                 .clickable {
-                                    Log.i("Coords of CITY", "HomeScreen: ${city.lat}, ${city.lon}")
+                                    keyboardController?.hide()
                                     load(city.lat.toString(), city.lon.toString())
-                                    localCity = "${city.name}, ${city.country}, ${city.state}"
+                                    localCity = listOfNotNull(
+                                        city.name,
+                                        city.state,
+                                        city.country
+                                    ).joinToString(", ")
                                     showSuggestions = false
                                 }
                                 .padding(12.dp)
