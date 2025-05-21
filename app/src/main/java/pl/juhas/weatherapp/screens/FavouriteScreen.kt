@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -55,7 +57,7 @@ fun FavouriteScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 20.dp)
-            .then(if (isPortrait) Modifier.padding(top = 50.dp) else Modifier)
+            .then(if (isPortrait && !isTablet) Modifier.padding(top = 50.dp) else Modifier)
     ) {
         Text(
             text = "Favourite places",
@@ -142,7 +144,8 @@ fun FavoritePlaceItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // City name
             Text(
@@ -151,7 +154,7 @@ fun FavoritePlaceItem(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Temperature and icon, right-aligned
             Row(
@@ -180,6 +183,7 @@ fun FavoritePlaceItem(
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
+                        modifier = Modifier.size(20.dp),
                         contentDescription = "More options",
                         tint = MaterialTheme.colorScheme.onSurface
                     )

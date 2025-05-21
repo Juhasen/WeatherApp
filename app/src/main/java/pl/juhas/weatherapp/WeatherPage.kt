@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,15 +38,24 @@ import pl.juhas.weatherapp.ui.theme.DarkPurple
 import pl.juhas.weatherapp.ui.theme.LightPurple
 import pl.juhas.weatherapp.ui.theme.Purple
 import pl.juhas.weatherapp.ui.theme.unselectedColor
+import kotlin.math.min
 
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
     val navController = rememberNavController()
     val configuration = LocalConfiguration.current
+    val density = LocalDensity.current.density
+
+    // Lepsze wykrywanie urządzeń - sprawdzamy zarówno szerokość, wysokość jak i gęstość pikseli
     val screenWidthDp = configuration.screenWidthDp
-    val isTablet = screenWidthDp >= 600
+    val screenHeightDp = configuration.screenHeightDp
+    val screenSizeInches = kotlin.math.sqrt(
+        (screenWidthDp * screenWidthDp + screenHeightDp * screenHeightDp).toDouble()
+    ) / density / 160.0
+
+    // Tablet to urządzenie z przekątną większą niż 7 cali lub szerokością większą niż 600dp w KAŻDEJ orientacji
+    val isTablet = screenSizeInches >= 7.0 || min(screenWidthDp, screenHeightDp) >= 600
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
-    val isPhone = !isTablet
 
     Box(
         modifier = Modifier
@@ -60,15 +71,16 @@ fun WeatherPage(viewModel: WeatherViewModel) {
             )
     ) {
         if (isTablet) {
+            // Tablet: pokazujemy wszystkie ekrany jednocześnie
             if (isLandscape) {
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f).fillMaxSize()) {
                         HomeScreen(viewModel)
                     }
-                    Box(Modifier.weight(0.7f).fillMaxSize()) {
+                    Box(Modifier.weight(0.5f).fillMaxSize()) {
                         FavouriteScreen(viewModel, navController, isTablet = true)
                     }
-                    Box(Modifier.weight(0.5f).fillMaxSize()) {
+                    Box(Modifier.weight(0.3f).fillMaxSize()) {
                         SettingsScreen(viewModel, isTablet = true)
                     }
                 }
@@ -77,16 +89,16 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     Box(Modifier.weight(1f).fillMaxSize()) {
                         HomeScreen(viewModel)
                     }
-                    Box(Modifier.weight(0.7f).fillMaxSize()) {
+                    Box(Modifier.weight(0.5f).fillMaxSize()) {
                         FavouriteScreen(viewModel, navController, isTablet = true)
                     }
-                    Box(Modifier.weight(0.5f).fillMaxSize()) {
+                    Box(Modifier.weight(0.3f).fillMaxSize()) {
                         SettingsScreen(viewModel, isTablet = true)
                     }
                 }
             }
         } else {
-            // Telefon: klasyczna nawigacja
+            // Telefon: klasyczna nawigacja - niezależnie od orientacji
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -119,14 +131,18 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     }
                 }
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
+                val currentRoute = navBackStackEntry?.destination?.route ?: ""
                 NavigationBar(
-                    containerColor = Purple,
-                    contentColor = Color.White
+                    containerColor = DarkPurple,
+                    contentColor = Color.White,
                 ) {
                     NavigationBarItem(
-                        selected = currentRoute == "home",
-                        onClick = { navController.navigate("home") },
+                        selected = currentRoute.startsWith("home"),
+                        onClick = {
+                            if (!currentRoute.startsWith("home")) navController.navigate("home") {
+                                popUpTo("home") { inclusive = true }
+                            }
+                        },
                         icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                         label = { Text("Home") },
                         colors = NavigationBarItemDefaults.colors(
@@ -139,7 +155,11 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     )
                     NavigationBarItem(
                         selected = currentRoute == "favourite",
-                        onClick = { navController.navigate("favourite") },
+                        onClick = {
+                            if (currentRoute != "favourite") navController.navigate("favourite") {
+                                popUpTo("home")
+                            }
+                        },
                         icon = { Icon(Icons.Default.Favorite, contentDescription = "Favourite") },
                         label = { Text("Favourite") },
                         colors = NavigationBarItemDefaults.colors(
@@ -152,7 +172,11 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                     )
                     NavigationBarItem(
                         selected = currentRoute == "settings",
-                        onClick = { navController.navigate("settings") },
+                        onClick = {
+                            if (currentRoute != "settings") navController.navigate("settings") {
+                                popUpTo("home")
+                            }
+                        },
                         icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                         label = { Text("Settings") },
                         colors = NavigationBarItemDefaults.colors(
