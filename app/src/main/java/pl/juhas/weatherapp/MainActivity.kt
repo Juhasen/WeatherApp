@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             WeatherAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
-                    WeatherPage(weatherViewModel)
+                    WeatherPage(weatherViewModel, this)
                 }
             }
         }

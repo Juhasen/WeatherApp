@@ -336,4 +336,3 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 }
-

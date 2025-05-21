@@ -1,5 +1,4 @@
 package pl.juhas.weatherapp.screens
-
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +49,7 @@ import pl.juhas.weatherapp.api.model.GeoLocationModelItem
 import pl.juhas.weatherapp.api.model.WeatherModel
 import pl.juhas.weatherapp.composables.ErrorHandler
 import pl.juhas.weatherapp.composables.GeneralCurrentWeatherInfo
+import pl.juhas.weatherapp.composables.OfflineDataBanner
 import pl.juhas.weatherapp.composables.WeatherInfoWithToggle
 import pl.juhas.weatherapp.ui.theme.DarkPurple
 import pl.juhas.weatherapp.ui.theme.LightPurple
@@ -60,6 +60,9 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
     val keyboardController = LocalSoftwareKeyboardController.current
     var localCity by remember { mutableStateOf("") }
     var showSuggestions by remember { mutableStateOf(false) }
+
+    // Zmienna do śledzenia, czy używamy danych offline
+    var isOfflineMode by remember { mutableStateOf(!viewModel.checkConnection()) }
 
     // Pobierz szerokość, długość geograficzną, nazwę miasta i kraj z argumentów nawigacji
     val latFromNav = backStackEntry?.arguments?.getString("lat")
@@ -140,13 +143,28 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                 ),
                 trailingIcon = {
                     IconButton(onClick = {
-                        Log.i("SZUKANIE MIASTA", "HomeScreen: $localCity")
-                        previewCityOptionsLoad(localCity)
-                        showSuggestions = true
+                        // Sprawdź, czy jest połączenie z internetem przed wyszukiwaniem
+                        val hasConnection = viewModel.checkConnection()
+                        if (hasConnection) {
+                            Log.i("SZUKANIE MIASTA", "HomeScreen: $localCity")
+                            previewCityOptionsLoad(localCity)
+                            showSuggestions = true
+                            isOfflineMode = false
+                        } else {
+                            isOfflineMode = true
+                        }
                     }) {
                         Icon(Icons.Default.Search, null, tint = Color.White)
                     }
                 }
+            )
+        }
+
+        // Pokaż baner offline, gdy jesteśmy w trybie offline i mamy dane pogodowe
+        if (isOfflineMode && current is NetworkResponse.Success<*>) {
+            val weatherModel = (current as NetworkResponse.Success<*>).data as WeatherModel
+            OfflineDataBanner(
+                city = "${weatherModel.name}, ${weatherModel.sys.country}"
             )
         }
 
@@ -247,6 +265,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
             forecast is NetworkResponse.Error -> (forecast as NetworkResponse.Error).message
             else -> null
         }
+
         if (errorMessage != null) {
             ErrorHandler(errorMessage)
             return
@@ -255,6 +274,11 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
         if (current is NetworkResponse.Success<*> && forecast is NetworkResponse.Success<*>) {
             val currentModel = (current as NetworkResponse.Success<*>).data as WeatherModel
             val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
+
+            // Zaktualizuj nazwę miasta w polu wyszukiwania, jeśli jest puste
+            if (localCity.isEmpty()) {
+                localCity = "${currentModel.name}, ${currentModel.sys.country}"
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
