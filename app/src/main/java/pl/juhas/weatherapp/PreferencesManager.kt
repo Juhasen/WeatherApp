@@ -25,6 +25,7 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val KEY_FAVORITES = "favorite_places"
         private const val KEY_UNIT = "unit_preference"
+        private const val KEY_REFRESH_INTERVAL = "refresh_interval"
     }
 
     // Weather data storage by coordinates
@@ -100,6 +101,17 @@ class PreferencesManager(context: Context) {
         return Pair(lat, lon)
     }
 
+    // Refresh interval methods
+    fun saveRefreshInterval(seconds: Int) {
+        prefs.edit {
+            putInt(KEY_REFRESH_INTERVAL, seconds)
+        }
+    }
+
+    fun getRefreshInterval(): Int {
+        return prefs.getInt(KEY_REFRESH_INTERVAL, 30) // domyślnie 30 sekund
+    }
+
     // Flow for favorite places (unchanged)
     val favoritePlacesFlow: Flow<List<FavoritePlace>> = callbackFlow {
         trySend(getFavoritePlaces())
@@ -116,3 +128,4 @@ class PreferencesManager(context: Context) {
         }
     }
 }
+

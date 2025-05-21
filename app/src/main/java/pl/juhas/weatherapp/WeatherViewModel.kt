@@ -24,7 +24,6 @@ import pl.juhas.weatherapp.api.model.WeatherModel
 class WeatherViewModel(context: Context) : ViewModel() {
     private val appContext = context.applicationContext
 
-
     fun checkConnection(): Boolean {
         return NetworkUtils.isInternetAvailable(appContext)
     }
@@ -49,6 +48,12 @@ class WeatherViewModel(context: Context) : ViewModel() {
         policy = structuralEqualityPolicy()
     )
 
+    var refreshInterval by mutableStateOf(
+        value = preferencesManager.getRefreshInterval(),
+        policy = structuralEqualityPolicy()
+    )
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
     private val _currentWeatherResult = MutableLiveData<NetworkResponse<WeatherModel>>()
     val currentWeatherResult: LiveData<NetworkResponse<WeatherModel>> = _currentWeatherResult
 
@@ -67,6 +72,8 @@ class WeatherViewModel(context: Context) : ViewModel() {
     init {
         // Wczytaj preferowaną jednostkę z SharedPreferences
         unit = preferencesManager.getUnitPreference()
+        refreshInterval = preferencesManager.getRefreshInterval()
+        startAutoRefresh()
         viewModelScope.launch {
             preferencesManager.favoritePlacesFlow
                 .collect { places ->
@@ -99,8 +106,24 @@ class WeatherViewModel(context: Context) : ViewModel() {
 
     fun updateUnit(newUnit: String) {
         unit = newUnit
-        preferencesManager.saveUnitPreference(newUnit) // Zapisz preferencję w SharedPreferences
+        preferencesManager.saveUnitPreference(newUnit)
         refreshWeatherData()
+    }
+
+    fun updateRefreshInterval(newInterval: Int) {
+        refreshInterval = newInterval
+        preferencesManager.saveRefreshInterval(newInterval)
+        startAutoRefresh()
+    }
+
+    private fun startAutoRefresh() {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            while (true) {
+                refreshWeatherData()
+                kotlinx.coroutines.delay(refreshInterval * 1000L)
+            }
+        }
     }
 
     fun getCurrentWeather(lat: String, lon: String) {
@@ -110,7 +133,6 @@ class WeatherViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             _currentWeatherResult.value = NetworkResponse.Loading
 
-            // Try to load cached data for these specific coordinates first
             val cachedData = preferencesManager.getWeatherData(lat, lon)
 
             if (cachedData != null) {
@@ -251,6 +273,9 @@ class WeatherViewModel(context: Context) : ViewModel() {
         if (checkConnection()) {
             getCurrentWeather(lastLat, lastLon)
             getForecast(lastLat, lastLon)
+            fetchWeatherForFavorites()
+            val date = java.util.Date(System.currentTimeMillis())
+            Log.i("refreshWeatherData", "Refreshed weather data at $date")
         }
     }
 
@@ -305,3 +330,4 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 }
+

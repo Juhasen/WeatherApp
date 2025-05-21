@@ -60,6 +60,41 @@ fun SettingsScreen(viewModel: WeatherViewModel) {
                 viewModel.updateUnit(unitMap[selectedKey] ?: "metric")
             }
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Refresh interval",
+            color = Color.White,
+            fontSize = 22.sp
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val intervals = listOf(15, 30, 60)
+        var selectedInterval by remember { mutableStateOf(viewModel.refreshInterval) }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            intervals.forEach { interval ->
+                val isSelected = selectedInterval == interval
+                Button(
+                    onClick = {
+                        selectedInterval = interval
+                        viewModel.updateRefreshInterval(interval)
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSelected) LightPurple else DarkPurple,
+                        contentColor = Color.White
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF878787)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("${interval}s")
+                }
+            }
+        }
     }
 }
 
