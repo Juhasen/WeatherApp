@@ -1,5 +1,6 @@
 package pl.juhas.weatherapp.composables
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +97,7 @@ fun GeneralCurrentWeatherInfo(
                             current.coord.lon
                         )
                     } else {
+                        Log.i("addFavoritePlaceGENERAL", "${current.name}, ${current.sys.country}, ${current.coord.lat}, ${current.coord.lon}")
                         viewModel.addFavoritePlace(
                             current.name,
                             current.sys.country,

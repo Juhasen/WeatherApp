@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -64,17 +65,23 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
     val cityNameFromNav = backStackEntry?.arguments?.getString("city")
     val countryFromNav = backStackEntry?.arguments?.getString("country")
 
-    // Załaduj dane pogodowe tylko raz, gdy lat/lon są przekazane
-    if (!latFromNav.isNullOrEmpty() && !lonFromNav.isNullOrEmpty() && localCity.isEmpty()) {
-        viewModel.getCurrentWeather(latFromNav, lonFromNav)
-        viewModel.getForecast(latFromNav, lonFromNav)
-        localCity = "$cityNameFromNav, $countryFromNav"
-    }
-
     fun load(lat: String, lon: String) {
+        Log.i("Coordinates LOAD", "HomeScreen: $lat, $lon")
         viewModel.getCurrentWeather(lat, lon)
         viewModel.getForecast(lat, lon)
     }
+
+    val initialized = remember { mutableStateOf(false) }
+
+    LaunchedEffect(latFromNav, lonFromNav) {
+        if (!latFromNav.isNullOrEmpty() && !lonFromNav.isNullOrEmpty() && !initialized.value) {
+            load(latFromNav, lonFromNav)
+            Log.i("Coordinates from NAV", "HomeScreen: $latFromNav, $lonFromNav")
+            localCity = listOfNotNull(cityNameFromNav, countryFromNav).joinToString(", ")
+            initialized.value = true
+        }
+    }
+
 
     fun previewCityOptionsLoad(city: String) {
         viewModel.getGeoLocation(city)
@@ -136,6 +143,10 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
             )
         }
 
+        fun formatCoord(coord: Double): String {
+            return "%.4f".format(coord).trimEnd('0').trimEnd('.').replace(",", ".")
+        }
+
         val context = LocalContext.current
         if (showSuggestions && cityOptions is NetworkResponse.Success<*>) {
             val rawCities = (cityOptions as NetworkResponse.Success<*>).data as List<GeoLocationModelItem>
@@ -174,7 +185,10 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                                 .background(brush = gradientBrush, shape = RoundedCornerShape(20.dp))
                                 .clickable {
                                     keyboardController?.hide()
-                                    load(city.lat.toString(), city.lon.toString())
+                                    val latFormatted = formatCoord(city.lat)
+                                    val lonFormatted = formatCoord(city.lon)
+                                    load(latFormatted, lonFormatted)
+                                    Log.i("Coordinates", "Load po click: $latFormatted, $lonFormatted")
                                     localCity = listOfNotNull(
                                         city.name,
                                         city.state,
