@@ -118,6 +118,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
 
     private fun startAutoRefresh() {
         refreshJob?.cancel()
+        if (refreshInterval <= 0) return // Wyłącz odświeżanie, jeśli interwał to 0
         refreshJob = viewModelScope.launch {
             while (true) {
                 refreshWeatherData()
@@ -126,9 +127,26 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 
+    private fun isValidLocation(lat: String, lon: String): Boolean {
+        return lat != "0.0" && lon != "0.0" && lat.isNotBlank() && lon.isNotBlank()
+    }
+
+    private fun refreshWeatherData() {
+        if (checkConnection()) {
+            if (isValidLocation(lastLat, lastLon)) {
+                getCurrentWeather(lastLat, lastLon)
+                getForecast(lastLat, lastLon)
+            }
+            fetchWeatherForFavorites()
+            val date = java.util.Date(System.currentTimeMillis())
+            Log.i("refreshWeatherData", "Refreshed weather data at $date")
+        }
+    }
+
     fun getCurrentWeather(lat: String, lon: String) {
         lastLat = lat
         lastLon = lon
+        if (!isValidLocation(lat, lon)) return
 
         viewModelScope.launch {
             _currentWeatherResult.value = NetworkResponse.Loading
@@ -268,18 +286,6 @@ class WeatherViewModel(context: Context) : ViewModel() {
     }
 
 
-    // Update the refresh function to handle offline case
-    private fun refreshWeatherData() {
-        if (checkConnection()) {
-            getCurrentWeather(lastLat, lastLon)
-            getForecast(lastLat, lastLon)
-            fetchWeatherForFavorites()
-            val date = java.util.Date(System.currentTimeMillis())
-            Log.i("refreshWeatherData", "Refreshed weather data at $date")
-        }
-    }
-
-    // Update fetchWeatherForFavorites to handle offline case
     fun fetchWeatherForFavorites() {
         viewModelScope.launch {
             val favoritePlaces = preferencesManager.getFavoritePlaces()

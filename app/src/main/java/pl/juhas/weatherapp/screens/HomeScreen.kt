@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -90,6 +92,10 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
     val cityOptions by viewModel.geoLocationResult.observeAsState()
     val current by viewModel.currentWeatherResult.observeAsState()
     val forecast by viewModel.forecastResult.observeAsState()
+
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.screenHeightDp > configuration.screenWidthDp
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -103,6 +109,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                 )
             )
             .padding(top = 20.dp)
+            .then(if (isPortrait) Modifier.padding(top = 30.dp) else Modifier)
     ) {
         Row(
             modifier = Modifier
@@ -249,11 +256,20 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
             val currentModel = (current as NetworkResponse.Success<*>).data as WeatherModel
             val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
 
-            GeneralCurrentWeatherInfo(
-                currentModel,
-                viewModel = viewModel
-            )
-            WeatherInfoWithToggle(currentModel, forecastModel)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                item {
+                    GeneralCurrentWeatherInfo(
+                        currentModel,
+                        viewModel = viewModel
+                    )
+                }
+                item {
+                    WeatherInfoWithToggle(currentModel, forecastModel)
+                }
+            }
         } else {
             Box(
                 Modifier.fillMaxSize(),

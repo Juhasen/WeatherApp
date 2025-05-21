@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +38,8 @@ import kotlin.math.roundToInt
 @Composable
 fun FavouriteScreen(
     viewModel: WeatherViewModel,
-    navController: NavController
+    navController: NavController,
+    isTablet: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
     var removingKey by remember { mutableStateOf<String?>(null) }
@@ -46,44 +48,71 @@ fun FavouriteScreen(
     val favoritePlaces by viewModel.favoritePlaces.collectAsState()
     val favoriteWeatherData by viewModel.favoriteWeatherData.collectAsState()
 
-    LazyColumn(
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.screenHeightDp > configuration.screenWidthDp
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 42.dp)
-            .padding(horizontal = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(top = 20.dp)
+            .then(if (isPortrait) Modifier.padding(top = 50.dp) else Modifier)
     ) {
-        items(
-            items = favoritePlaces,
-            key = { it.name }
-        ) { place ->
-            val isRemoving = removingKey == place.name
-
-            AnimatedVisibility(
-                visible = !isRemoving,
-                exit = fadeOut(animationSpec = tween(500))
-            ) {
-                FavoritePlaceItem(
-                    placeName = "${place.name}, ${place.country}",
-                    temperature = favoriteWeatherData[place.name]?.main?.temp
-                        ?.roundToInt()?.toString() ?: "--",
-                    weatherIconUrl = favoriteWeatherData[place.name]?.weather
-                        ?.firstOrNull()?.icon
-                        ?.let { "https://openweathermap.org/img/wn/$it@2x.png" },
-                    onClick = {
-                        navController.navigate("home/${place.lat}/${place.lon}/${place.name}/${place.country}")
-                    },
-                    onRemove = {
-                        removingKey = place.name
-                        scope.launch {
-                            delay(500L)
-                            viewModel.removeFavoritePlace(
-                                place.name, place.country, place.lat, place.lon
-                            )
-                            removingKey = null
-                        }
+        Text(
+            text = "Favourite places",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            textAlign = TextAlign.Center
+        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 10.dp)
+                .padding(horizontal = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = favoritePlaces,
+                key = { it.name }
+            ) { place ->
+                val isRemoving = removingKey == place.name
+                val onClickAction = if (isTablet) {
+                    {
+                        viewModel.getCurrentWeather(place.lat.toString(), place.lon.toString())
+                        viewModel.getForecast(place.lat.toString(), place.lon.toString())
                     }
-                )
+                } else {
+                    {
+                        navController.navigate("home/${place.lat}/${place.lon}/${place.name}/${place.country}")
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = !isRemoving,
+                    exit = fadeOut(animationSpec = tween(500))
+                ) {
+                    FavoritePlaceItem(
+                        placeName = "${place.name}, ${place.country}",
+                        temperature = favoriteWeatherData[place.name]?.main?.temp
+                            ?.roundToInt()?.toString() ?: "--",
+                        weatherIconUrl = favoriteWeatherData[place.name]?.weather
+                            ?.firstOrNull()?.icon
+                            ?.let { "https://openweathermap.org/img/wn/$it@2x.png" },
+                        onClick = onClickAction,
+                        onRemove = {
+                            removingKey = place.name
+                            scope.launch {
+                                delay(500L)
+                                viewModel.removeFavoritePlace(
+                                    place.name, place.country, place.lat, place.lon
+                                )
+                                removingKey = null
+                            }
+                        }
+                    )
+                }
             }
         }
     }

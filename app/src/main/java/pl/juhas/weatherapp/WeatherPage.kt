@@ -3,7 +3,9 @@ package pl.juhas.weatherapp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
@@ -19,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,6 +40,11 @@ import pl.juhas.weatherapp.ui.theme.unselectedColor
 @Composable
 fun WeatherPage(viewModel: WeatherViewModel) {
     val navController = rememberNavController()
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+    val isTablet = screenWidthDp >= 600
+    val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+    val isPhone = !isTablet
 
     Box(
         modifier = Modifier
@@ -50,86 +59,111 @@ fun WeatherPage(viewModel: WeatherViewModel) {
                 )
             )
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 1. Main content fills remaining height
-            Box(modifier = Modifier.weight(1f)) {
-                NavHost(
-                    navController = navController,
-                    startDestination = "home"
-                ) {
-                    composable("home") {
+        if (isTablet) {
+            if (isLandscape) {
+                Row(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f).fillMaxSize()) {
                         HomeScreen(viewModel)
                     }
-                    composable("favourite") {
-                        FavouriteScreen(viewModel, navController)
+                    Box(Modifier.weight(0.7f).fillMaxSize()) {
+                        FavouriteScreen(viewModel, navController, isTablet = true)
                     }
-                    composable("settings") {
-                        SettingsScreen(viewModel)
+                    Box(Modifier.weight(0.5f).fillMaxSize()) {
+                        SettingsScreen(viewModel, isTablet = true)
                     }
-                    composable(
-                        route = "home/{lat}/{lon}/{city}/{country}",
-                        arguments = listOf(
-                            navArgument("lat") { type = NavType.StringType },
-                            navArgument("lon") { type = NavType.StringType },
-                            navArgument("city") { type = NavType.StringType },
-                            navArgument("country") { type = NavType.StringType }
-                        )
-                    ) { backStackEntry ->
-                        HomeScreen(viewModel = viewModel, backStackEntry = backStackEntry)
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f).fillMaxSize()) {
+                        HomeScreen(viewModel)
+                    }
+                    Box(Modifier.weight(0.7f).fillMaxSize()) {
+                        FavouriteScreen(viewModel, navController, isTablet = true)
+                    }
+                    Box(Modifier.weight(0.5f).fillMaxSize()) {
+                        SettingsScreen(viewModel, isTablet = true)
                     }
                 }
             }
-
-
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
-
-            NavigationBar(
-                containerColor = Purple,
-                contentColor = Color.White
+        } else {
+            // Telefon: klasyczna nawigacja
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                NavigationBarItem(
-                    selected = currentRoute == "home",
-                    onClick = { navController.navigate("home") },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        unselectedIconColor = unselectedColor,
-                        selectedTextColor = Color.White,
-                        unselectedTextColor = unselectedColor,
-                        indicatorColor = Color.Transparent
+                Box(modifier = Modifier.weight(1f)) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = "home"
+                    ) {
+                        composable("home") {
+                            HomeScreen(viewModel)
+                        }
+                        composable("favourite") {
+                            FavouriteScreen(viewModel, navController)
+                        }
+                        composable("settings") {
+                            SettingsScreen(viewModel)
+                        }
+                        composable(
+                            route = "home/{lat}/{lon}/{city}/{country}",
+                            arguments = listOf(
+                                navArgument("lat") { type = NavType.StringType },
+                                navArgument("lon") { type = NavType.StringType },
+                                navArgument("city") { type = NavType.StringType },
+                                navArgument("country") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            HomeScreen(viewModel = viewModel, backStackEntry = backStackEntry)
+                        }
+                    }
+                }
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                NavigationBar(
+                    containerColor = Purple,
+                    contentColor = Color.White
+                ) {
+                    NavigationBarItem(
+                        selected = currentRoute == "home",
+                        onClick = { navController.navigate("home") },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text("Home") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            unselectedIconColor = unselectedColor,
+                            selectedTextColor = Color.White,
+                            unselectedTextColor = unselectedColor,
+                            indicatorColor = Color.Transparent
+                        )
                     )
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "favourite",
-                    onClick = { navController.navigate("favourite") },
-                    icon = { Icon(Icons.Default.Favorite, contentDescription = "Favourite") },
-                    label = { Text("Favourite") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        unselectedIconColor = unselectedColor,
-                        selectedTextColor = Color.White,
-                        unselectedTextColor = unselectedColor,
-                        indicatorColor = Color.Transparent
+                    NavigationBarItem(
+                        selected = currentRoute == "favourite",
+                        onClick = { navController.navigate("favourite") },
+                        icon = { Icon(Icons.Default.Favorite, contentDescription = "Favourite") },
+                        label = { Text("Favourite") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            unselectedIconColor = unselectedColor,
+                            selectedTextColor = Color.White,
+                            unselectedTextColor = unselectedColor,
+                            indicatorColor = Color.Transparent
+                        )
                     )
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "settings",
-                    onClick = { navController.navigate("settings") },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        unselectedIconColor = unselectedColor,
-                        selectedTextColor = Color.White,
-                        unselectedTextColor = unselectedColor,
-                        indicatorColor = Color.Transparent
+                    NavigationBarItem(
+                        selected = currentRoute == "settings",
+                        onClick = { navController.navigate("settings") },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                        label = { Text("Settings") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            unselectedIconColor = unselectedColor,
+                            selectedTextColor = Color.White,
+                            unselectedTextColor = unselectedColor,
+                            indicatorColor = Color.Transparent
+                        )
                     )
-                )
+                }
             }
         }
     }

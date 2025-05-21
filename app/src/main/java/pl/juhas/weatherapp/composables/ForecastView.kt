@@ -33,8 +33,11 @@ fun ForecastView(data: ForecastModel) {
             }
             val minNightTemp = nightTemps.minOfOrNull { it.main.temp }
 
-            val targetEntry = dayEntries.firstOrNull { it.dt_txt.endsWith("15:00:00") }
-                ?: dayEntries.first()
+            // Szukaj najbliższego wpisu do 15:00:00
+            val targetEntry = dayEntries.minByOrNull { entry ->
+                val hour = entry.dt_txt.substringAfter(" ").substringBefore(":").toIntOrNull() ?: 0
+                kotlin.math.abs(hour - 15)
+            } ?: dayEntries.first()
 
             ForecastDay(
                 data = targetEntry,
@@ -51,8 +54,9 @@ fun ForecastView(data: ForecastModel) {
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(dailyForecasts.drop(1)) { forecastDay ->
+        items(dailyForecasts) { forecastDay ->
             ForecastCard(forecastDay)
         }
     }
 }
+
