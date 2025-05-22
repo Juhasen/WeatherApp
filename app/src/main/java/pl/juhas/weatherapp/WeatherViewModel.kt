@@ -73,6 +73,10 @@ class WeatherViewModel(context: Context) : ViewModel() {
         // Wczytaj preferowaną jednostkę z SharedPreferences
         unit = preferencesManager.getUnitPreference()
         refreshInterval = preferencesManager.getRefreshInterval()
+
+        // Wczytaj ostatnią lokalizację i dane pogodowe
+        loadLastLocationOnStartup()
+
         startAutoRefresh()
         viewModelScope.launch {
             preferencesManager.favoritePlacesFlow
@@ -80,6 +84,47 @@ class WeatherViewModel(context: Context) : ViewModel() {
                     _favoritePlaces.value = places
                     fetchWeatherForFavorites() // Pobierz dane pogodowe dla ulubionych miejsc
                 }
+        }
+    }
+
+    private fun loadLastLocationOnStartup() {
+        viewModelScope.launch {
+            // Pobierz zapisaną ostatnią lokalizację
+            val (lat, lon) = preferencesManager.getLastLocation() ?: Pair("0.0", "0.0")
+            if (lat != "0.0" && lon != "0.0") {
+                lastLat = lat
+                lastLon = lon
+
+                // Próba pobrania danych z serwera jeśli jest internet
+                if (checkConnection()) {
+                    getCurrentWeather(lat, lon)
+                    getForecast(lat, lon)
+                } else {
+                    // Wczytaj dane z pamięci podręcznej
+                    val cachedWeatherData = preferencesManager.getWeatherData(lat, lon)
+                    val cachedForecastData = preferencesManager.getForecastData(lat, lon)
+
+                    if (cachedWeatherData != null) {
+                        try {
+                            val weather = gson.fromJson(cachedWeatherData, WeatherModel::class.java)
+                            _currentWeatherResult.value = NetworkResponse.Success(weather)
+                        } catch (e: Exception) {
+                            Log.e("WeatherViewModel", "Error loading cached weather", e)
+                            _currentWeatherResult.value = NetworkResponse.Error("Błąd podczas wczytywania danych pogodowych z pamięci podręcznej")
+                        }
+                    }
+
+                    if (cachedForecastData != null) {
+                        try {
+                            val forecast = gson.fromJson(cachedForecastData, ForecastModel::class.java)
+                            _forecastResult.value = NetworkResponse.Success(forecast)
+                        } catch (e: Exception) {
+                            Log.e("WeatherViewModel", "Error loading cached forecast", e)
+                            _forecastResult.value = NetworkResponse.Error("Błąd podczas wczytywania prognozy pogody z pamięci podręcznej")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -295,6 +340,8 @@ class WeatherViewModel(context: Context) : ViewModel() {
                 Log.i("fetchWeatherForFavorites", "${place.name} ${place.lat} ${place.lon}")
                 val lat = place.lat.toString()
                 val lon = place.lon.toString()
+                // Tworzę unikalny klucz dla każdej lokalizacji
+                val uniqueKey = "${place.name}_${place.country}"
 
                 if (checkConnection()) {
                     // Online mode - fetch fresh data
@@ -306,9 +353,9 @@ class WeatherViewModel(context: Context) : ViewModel() {
                         )
                         if (response.isSuccessful) {
                             response.body()?.let { weather ->
-                                weatherDataMap[place.name] = weather
+                                weatherDataMap[uniqueKey] = weather
                                 Log.i("saveWeatherDataFavourites", "$lat, $lon")
-                                preferencesManager.saveWeatherData(lat,lon, gson.toJson(weather))
+                                preferencesManager.saveWeatherData(lat, lon, gson.toJson(weather))
                             }
                         }
                     } catch (e: Exception) {
@@ -316,7 +363,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
                         val cached = preferencesManager.getWeatherData(lat, lon)
                         cached?.let {
                             try {
-                                weatherDataMap[place.name] = gson.fromJson(it, WeatherModel::class.java)
+                                weatherDataMap[uniqueKey] = gson.fromJson(it, WeatherModel::class.java)
                             } catch (e: Exception) { /* ignore */
                             }
                         }
@@ -326,13 +373,194 @@ class WeatherViewModel(context: Context) : ViewModel() {
                     val cached = preferencesManager.getWeatherData(lat, lon)
                     cached?.let {
                         try {
-                            weatherDataMap[place.name] = gson.fromJson(it, WeatherModel::class.java)
+                            weatherDataMap[uniqueKey] = gson.fromJson(it, WeatherModel::class.java)
                         } catch (e: Exception) { /* ignore */
                         }
                     }
                 }
             }
             _favoriteWeatherData.value = weatherDataMap
+        }
+    }
+
+    /**
+     * Synchronicznie pobiera zarówno aktualną pogodę, jak i prognozę dla wybranej lokalizacji.
+     * Zapewnia spójność danych przy kliknięciu w ulubione miejsce.
+     */
+    fun loadFullWeatherData(lat: String, lon: String) {
+        viewModelScope.launch {
+            // Użyj wartości lastLat i lastLon do śledzenia aktualnie wybranej lokalizacji
+            lastLat = lat
+            lastLon = lon
+
+            Log.i("loadFullWeatherData", "Loading full data for $lat, $lon")
+
+            // Najpierw ustawić stan ładowania dla obu źródeł danych
+            _currentWeatherResult.value = NetworkResponse.Loading
+            _forecastResult.value = NetworkResponse.Loading
+
+            if (checkConnection()) {
+                // Online mode
+                try {
+                    // Pobierz aktualne dane pogodowe
+                    val weatherResponse = weatherApi.getCurrentWeather(lat, lon, Constant.apiKey, unit)
+                    if (weatherResponse.isSuccessful) {
+                        weatherResponse.body()?.let { weather ->
+                            _currentWeatherResult.value = NetworkResponse.Success(weather)
+                            preferencesManager.saveWeatherData(lat, lon, gson.toJson(weather))
+                            preferencesManager.saveLastLocation(lat, lon)
+                        } ?: run {
+                            _currentWeatherResult.value = NetworkResponse.Error("No weather data found")
+                        }
+                    } else {
+                        _currentWeatherResult.value = NetworkResponse.Error("API error: ${weatherResponse.code()}")
+                    }
+
+                    // Pobierz dane prognozy
+                    val forecastResponse = weatherApi.getForecast(lat, lon, Constant.apiKey, unit)
+                    if (forecastResponse.isSuccessful) {
+                        forecastResponse.body()?.let { forecast ->
+                            _forecastResult.value = NetworkResponse.Success(forecast)
+                            preferencesManager.saveForecastData(lat, lon, gson.toJson(forecast))
+                        } ?: run {
+                            _forecastResult.value = NetworkResponse.Error("No forecast data found")
+                        }
+                    } else {
+                        _forecastResult.value = NetworkResponse.Error("API error: ${forecastResponse.code()}")
+                    }
+                } catch (e: Exception) {
+                    // W przypadku błędu pobierania, spróbuj wczytać dane z pamięci podręcznej
+                    Log.e("loadFullWeatherData", "Error fetching data", e)
+                    loadCachedData(lat, lon)
+                }
+            } else {
+                // Offline mode - pobierz dane z pamięci podręcznej
+                loadCachedData(lat, lon)
+            }
+        }
+    }
+
+    /**
+     * Pomocnicza metoda do ładowania danych z pamięci podręcznej.
+     * Dodano normalizację współrzędnych dla zapewnienia spójności kluczy cache.
+     */
+    private fun loadCachedData(lat: String, lon: String) {
+        // Normalizuj współrzędne żeby zapewnić spójność kluczy cache
+        val normalizedLat = normalizeCoordinate(lat)
+        val normalizedLon = normalizeCoordinate(lon)
+
+        Log.i("loadCachedData", "Próba wczytania danych dla lokalizacji: $normalizedLat, $normalizedLon")
+
+        // Sprawdzamy ostatnią lokalizację z zapisanych preferencji w celach debugowania
+        val (savedLat, savedLon) = preferencesManager.getLastLocation() ?: Pair("0.0", "0.0")
+        Log.i("loadCachedData", "Ostatnio zapisana lokalizacja: $savedLat, $savedLon")
+
+        // Wczytaj dane aktualnej pogody z cache
+        val cachedWeatherData = preferencesManager.getWeatherData(normalizedLat, normalizedLon)
+        val cachedForecastData = preferencesManager.getForecastData(normalizedLat, normalizedLon)
+
+        // Wyświetlmy obie wartości w logach
+        Log.i("loadCachedData", "Dane pogody z cache: ${if (cachedWeatherData != null) "ZNALEZIONO" else "BRAK"}")
+        Log.i("loadCachedData", "Dane prognozy z cache: ${if (cachedForecastData != null) "ZNALEZIONO" else "BRAK"}")
+
+        var weatherLoaded = false
+        var forecastLoaded = false
+
+        // Wczytaj dane aktualnej pogody
+        if (cachedWeatherData != null) {
+            try {
+                val weather = gson.fromJson(cachedWeatherData, WeatherModel::class.java)
+                _currentWeatherResult.value = NetworkResponse.Success(weather)
+                weatherLoaded = true
+                Log.i("loadCachedData", "Pomyślnie wczytano dane pogodowe dla: $normalizedLat, $normalizedLon | Miasto: ${weather.name}")
+            } catch (e: Exception) {
+                Log.e("loadCachedData", "Error loading cached weather", e)
+                _currentWeatherResult.value = NetworkResponse.Error("Błąd podczas wczytywania danych pogodowych z pamięci podręcznej")
+            }
+        } else {
+            Log.e("loadCachedData", "Brak zapisanych danych pogodowych dla: $normalizedLat, $normalizedLon")
+            _currentWeatherResult.value = NetworkResponse.Error("Brak zapisanych danych pogodowych dla tej lokalizacji")
+        }
+
+        // Wczytaj dane prognozy
+        if (cachedForecastData != null) {
+            try {
+                val forecast = gson.fromJson(cachedForecastData, ForecastModel::class.java)
+                _forecastResult.value = NetworkResponse.Success(forecast)
+                forecastLoaded = true
+                // Wyciągnij nazwę miasta z prognozy aby zweryfikować
+                val forecastCity = forecast.city.name
+                val forecastCountry = forecast.city.country
+                Log.i("loadCachedData", "Pomyślnie wczytano prognozę dla: $normalizedLat, $normalizedLon | Miasto: $forecastCity, $forecastCountry")
+            } catch (e: Exception) {
+                Log.e("loadCachedData", "Error loading cached forecast", e)
+                _forecastResult.value = NetworkResponse.Error("Błąd podczas wczytywania prognozy pogody z pamięci podręcznej")
+            }
+        } else {
+            Log.e("loadCachedData", "Brak zapisanej prognozy dla: $normalizedLat, $normalizedLon")
+            _forecastResult.value = NetworkResponse.Error("Brak zapisanej prognozy dla tej lokalizacji")
+        }
+
+        // Jeśli nie udało się załadować ani pogody ani prognozy, spróbuj użyć ostatnio zapisanej lokalizacji
+        if (!weatherLoaded && !forecastLoaded) {
+            Log.w("loadCachedData", "Nie udało się załadować danych dla $normalizedLat, $normalizedLon. Próba użycia ostatnio zapisanej lokalizacji.")
+            fallbackToLastLocation()
+        }
+    }
+
+    /**
+     * Metoda awaryjna, która próbuje załadować dane z ostatnio zapisanej lokalizacji
+     */
+    private fun fallbackToLastLocation() {
+        val (lat, lon) = preferencesManager.getLastLocation() ?: Pair("0.0", "0.0")
+
+        if (isValidLocation(lat, lon)) {
+            Log.i("fallbackToLastLocation", "Próba wczytania danych z ostatniej lokalizacji: $lat, $lon")
+
+            val normalizedLat = normalizeCoordinate(lat)
+            val normalizedLon = normalizeCoordinate(lon)
+
+            // Wczytaj dane aktualnej pogody z cache
+            val cachedWeatherData = preferencesManager.getWeatherData(normalizedLat, normalizedLon)
+            if (cachedWeatherData != null) {
+                try {
+                    val weather = gson.fromJson(cachedWeatherData, WeatherModel::class.java)
+                    _currentWeatherResult.value = NetworkResponse.Success(weather)
+                    Log.i("fallbackToLastLocation", "Pomyślnie wczytano dane pogodowe dla ostatniej lokalizacji | Miasto: ${weather.name}")
+                } catch (e: Exception) {
+                    Log.e("fallbackToLastLocation", "Error loading cached weather from last location", e)
+                }
+            }
+
+            // Wczytaj dane prognozy z cache
+            val cachedForecastData = preferencesManager.getForecastData(normalizedLat, normalizedLon)
+            if (cachedForecastData != null) {
+                try {
+                    val forecast = gson.fromJson(cachedForecastData, ForecastModel::class.java)
+                    _forecastResult.value = NetworkResponse.Success(forecast)
+                    Log.i("fallbackToLastLocation", "Pomyślnie wczytano prognozę dla ostatniej lokalizacji | Miasto: ${forecast.city.name}")
+                } catch (e: Exception) {
+                    Log.e("fallbackToLastLocation", "Error loading cached forecast from last location", e)
+                }
+            }
+        } else {
+            Log.e("fallbackToLastLocation", "Brak zapisanej ostatniej lokalizacji lub nieprawidłowy format")
+        }
+    }
+
+    /**
+     * Funkcja pomocnicza do normalizacji współrzędnych geograficznych.
+     * Zapewnia spójny format klucza niezależnie od źródła współrzędnych.
+     */
+    private fun normalizeCoordinate(coord: String): String {
+        return try {
+            // Konwertujemy string na double i z powrotem na string z ustaloną precyzją
+            val value = coord.toDouble()
+            String.format("%.4f", value).trimEnd('0').trimEnd('.')
+                .replace(",", ".") // Dla różnych ustawień lokalnych
+        } catch (e: Exception) {
+            Log.e("normalizeCoordinate", "Błąd podczas normalizacji współrzędnej: $coord", e)
+            coord // Zwracamy oryginalną wartość jeśli jest problem
         }
     }
 }

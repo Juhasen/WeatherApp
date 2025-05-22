@@ -78,15 +78,16 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
 
     val initialized = remember { mutableStateOf(false) }
 
+    // Dodatkowy LaunchedEffect specjalnie do obsługi parametrów z nawigacji
     LaunchedEffect(latFromNav, lonFromNav) {
         if (!latFromNav.isNullOrEmpty() && !lonFromNav.isNullOrEmpty() && !initialized.value) {
-            load(latFromNav, lonFromNav)
             Log.i("Coordinates from NAV", "HomeScreen: $latFromNav, $lonFromNav")
+            // Użyj nowej metody loadFullWeatherData zamiast oddzielnych wywołań
+            viewModel.loadFullWeatherData(latFromNav, lonFromNav)
             localCity = listOfNotNull(cityNameFromNav, countryFromNav).joinToString(", ")
             initialized.value = true
         }
     }
-
 
     fun previewCityOptionsLoad(city: String) {
         viewModel.getGeoLocation(city)
@@ -95,6 +96,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
     val cityOptions by viewModel.geoLocationResult.observeAsState()
     val current by viewModel.currentWeatherResult.observeAsState()
     val forecast by viewModel.forecastResult.observeAsState()
+
 
     val configuration = LocalConfiguration.current
     val isPortrait = configuration.screenHeightDp > configuration.screenWidthDp
@@ -214,11 +216,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                                     val lonFormatted = formatCoord(city.lon)
                                     load(latFormatted, lonFormatted)
                                     Log.i("Coordinates", "Load po click: $latFormatted, $lonFormatted")
-                                    localCity = listOfNotNull(
-                                        city.name,
-                                        city.state,
-                                        city.country
-                                    ).joinToString(", ")
+                                    localCity = ""
                                     showSuggestions = false
                                 }
                                 .padding(12.dp)
@@ -274,11 +272,6 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
         if (current is NetworkResponse.Success<*> && forecast is NetworkResponse.Success<*>) {
             val currentModel = (current as NetworkResponse.Success<*>).data as WeatherModel
             val forecastModel = (forecast as NetworkResponse.Success<*>).data as ForecastModel
-
-            // Zaktualizuj nazwę miasta w polu wyszukiwania, jeśli jest puste
-            if (localCity.isEmpty()) {
-                localCity = "${currentModel.name}, ${currentModel.sys.country}"
-            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

@@ -45,6 +45,7 @@ class PreferencesManager(context: Context) {
     // Forecast data storage by coordinates
     fun saveForecastData(lat: String, lon: String, forecastData: String) {
         val key = "forecast_${lat}_${lon}"
+        Log.i("saveForecastData", "Zapisuję prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
         prefs.edit {
             putString(key, forecastData)
         }
@@ -52,7 +53,19 @@ class PreferencesManager(context: Context) {
 
     fun getForecastData(lat: String, lon: String): String? {
         val key = "forecast_${lat}_${lon}"
-        return prefs.getString(key, null)
+        val data = prefs.getString(key, null)
+        if (data != null) {
+            Log.i("getForecastData", "Znaleziono prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
+        } else {
+            Log.i("getForecastData", "Brak prognozy dla lokalizacji: $lat, $lon z kluczem: $key")
+            // Wypiszmy wszystkie zapisane klucze zawierające "forecast_" aby zobaczyć jakie mamy prognozy
+            prefs.all.keys
+                .filter { it.startsWith("forecast_") }
+                .forEach { forecastKey ->
+                    Log.d("getForecastData", "Dostępna prognoza: $forecastKey")
+                }
+        }
+        return data
     }
 
     // Favorite places methods (unchanged)

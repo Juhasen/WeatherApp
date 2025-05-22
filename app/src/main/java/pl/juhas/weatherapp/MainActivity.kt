@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Add this factory class in the same file or a separate file
 class WeatherViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WeatherViewModel::class.java)) {

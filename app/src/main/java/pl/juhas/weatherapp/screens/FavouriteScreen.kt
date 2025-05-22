@@ -1,5 +1,6 @@
 package pl.juhas.weatherapp.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -80,13 +81,15 @@ fun FavouriteScreen(
                 key = { it.name }
             ) { place ->
                 val isRemoving = removingKey == place.name
+                // Używam nowej metody loadFullWeatherData zamiast oddzielnych wywołań
                 val onClickAction = if (isTablet) {
                     {
-                        viewModel.getCurrentWeather(place.lat.toString(), place.lon.toString())
-                        viewModel.getForecast(place.lat.toString(), place.lon.toString())
+                        Log.i("FavouriteClick", "Tablet mode - loading full weather data for ${place.name} at ${place.lat}, ${place.lon}")
+                        viewModel.loadFullWeatherData(place.lat.toString(), place.lon.toString())
                     }
                 } else {
                     {
+                        Log.i("FavouriteClick", "Phone mode - navigating to ${place.name} at ${place.lat}, ${place.lon}")
                         navController.navigate("home/${place.lat}/${place.lon}/${place.name}/${place.country}")
                     }
                 }
@@ -95,11 +98,14 @@ fun FavouriteScreen(
                     visible = !isRemoving,
                     exit = fadeOut(animationSpec = tween(500))
                 ) {
+                    // Tworzę ten sam unikalny klucz co w WeatherViewModel
+                    val uniqueKey = "${place.name}_${place.country}"
+
                     FavoritePlaceItem(
                         placeName = "${place.name}, ${place.country}",
-                        temperature = favoriteWeatherData[place.name]?.main?.temp
+                        temperature = favoriteWeatherData[uniqueKey]?.main?.temp
                             ?.roundToInt()?.toString() ?: "--",
-                        weatherIconUrl = favoriteWeatherData[place.name]?.weather
+                        weatherIconUrl = favoriteWeatherData[uniqueKey]?.weather
                             ?.firstOrNull()?.icon
                             ?.let { "https://openweathermap.org/img/wn/$it@2x.png" },
                         onClick = onClickAction,
