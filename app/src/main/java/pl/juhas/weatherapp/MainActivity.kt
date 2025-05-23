@@ -3,6 +3,7 @@ package pl.juhas.weatherapp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,15 +13,17 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pl.juhas.weatherapp.ui.theme.WeatherAppTheme
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
+    private lateinit var weatherViewModel: WeatherViewModel
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create ViewModel with factory that passes context
-        val weatherViewModel = ViewModelProvider(
+        weatherViewModel = ViewModelProvider(
             this,
             WeatherViewModelFactory(applicationContext)
         )[WeatherViewModel::class.java]
@@ -33,6 +36,24 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStop() {
+        Log.e("MainActivity", "onStop wywoływane - zatrzymywanie zadań")
+        weatherViewModel.stopAllJobs()
+        super.onStop()
+    }
+
+    override fun onPause() {
+        Log.e("MainActivity", "onPause wywoływane - zatrzymywanie zadań")
+        weatherViewModel.stopAllJobs()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        Log.e("MainActivity", "onDestroy wywoływane - zatrzymywanie zadań")
+        weatherViewModel.stopAllJobs()
+        super.onDestroy()
+    }
 }
 
 class WeatherViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
@@ -44,3 +65,4 @@ class WeatherViewModelFactory(private val context: Context) : ViewModelProvider.
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+

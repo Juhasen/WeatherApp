@@ -564,4 +564,23 @@ class WeatherViewModel(context: Context) : ViewModel() {
             coord // Zwracamy oryginalną wartość jeśli jest problem
         }
     }
+
+    /**
+     * Metoda jawnie zatrzymująca wszystkie zadania w tle i coroutines.
+     * Można ją wywołać z poziomu aktywności przy zamykaniu aplikacji.
+     */
+    fun stopAllJobs() {
+        try {
+            // Anuluj job odświeżania pogody w tle
+            refreshJob?.cancel()
+            refreshJob = null
+
+            // Anuluj wszystkie coroutines w viewModelScope
+            viewModelScope.coroutineContext.cancelChildren()
+
+            Log.e("WeatherViewModel", "stopAllJobs: Wszystkie zadania zatrzymane")
+        } catch (e: Exception) {
+            Log.e("WeatherViewModel", "Błąd podczas zatrzymywania zadań: ${e.message}")
+        }
+    }
 }
