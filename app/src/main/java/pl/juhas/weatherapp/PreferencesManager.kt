@@ -31,7 +31,7 @@ class PreferencesManager(context: Context) {
     // Weather data storage by coordinates
     fun saveWeatherData(lat: String, lon: String, weatherData: String) {
         val key = "weather_${lat}_${lon}"
-        Log.i("saveWeatherDataCurrent", "$lat, $lon")
+//        Log.i("saveWeatherDataCurrent", "$lat, $lon")
         prefs.edit {
             putString(key, weatherData)
         }
@@ -45,7 +45,7 @@ class PreferencesManager(context: Context) {
     // Forecast data storage by coordinates
     fun saveForecastData(lat: String, lon: String, forecastData: String) {
         val key = "forecast_${lat}_${lon}"
-        Log.i("saveForecastData", "Zapisuję prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
+//        Log.i("saveForecastData", "Zapisuję prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
         prefs.edit {
             putString(key, forecastData)
         }
@@ -55,7 +55,7 @@ class PreferencesManager(context: Context) {
         val key = "forecast_${lat}_${lon}"
         val data = prefs.getString(key, null)
         if (data != null) {
-            Log.i("getForecastData", "Znaleziono prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
+//            Log.i("getForecastData", "Znaleziono prognozę dla lokalizacji: $lat, $lon z kluczem: $key")
         } else {
             Log.i("getForecastData", "Brak prognozy dla lokalizacji: $lat, $lon z kluczem: $key")
             // Wypiszmy wszystkie zapisane klucze zawierające "forecast_" aby zobaczyć jakie mamy prognozy
@@ -68,7 +68,7 @@ class PreferencesManager(context: Context) {
         return data
     }
 
-    // Favorite places methods (unchanged)
+    // Favorite places methods
     fun addFavoritePlace(place: FavoritePlace) {
         val current = getFavoritePlaces().toMutableList()
         current.add(place)
@@ -82,6 +82,12 @@ class PreferencesManager(context: Context) {
         current.remove(place)
         prefs.edit {
             putString(KEY_FAVORITES, gson.toJson(current))
+            // Usuń również dane pogodowe dla tego miejsca
+            val lat = place.lat.toString()
+            val lon = place.lon.toString()
+
+            remove("weather_${lat}_${lon}")
+            remove("forecast_${lat}_${lon}")
         }
     }
 
@@ -91,7 +97,7 @@ class PreferencesManager(context: Context) {
         return gson.fromJson(json, type)
     }
 
-    // Unit preference methods (unchanged)
+    // Unit preference methods
     fun saveUnitPreference(unit: String) {
         prefs.edit {
             putString(KEY_UNIT, unit)
@@ -122,10 +128,10 @@ class PreferencesManager(context: Context) {
     }
 
     fun getRefreshInterval(): Int {
-        return prefs.getInt(KEY_REFRESH_INTERVAL, 30) // domyślnie 30 sekund
+        return prefs.getInt(KEY_REFRESH_INTERVAL, 30)
     }
 
-    // Flow for favorite places (unchanged)
+    // Flow for favorite places
     val favoritePlacesFlow: Flow<List<FavoritePlace>> = callbackFlow {
         trySend(getFavoritePlaces())
 

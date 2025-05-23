@@ -224,7 +224,7 @@ fun SettingsScreen(viewModel: WeatherViewModel, isTablet: Boolean = false) {
                 }
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
-                    onClick = { viewModel.updateRefreshInterval(viewModel.refreshInterval); viewModel.updateUnit(viewModel.unit) },
+                    onClick = { viewModel.refreshWeatherData() },
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Purple,

@@ -54,7 +54,7 @@ fun ForecastView(data: ForecastModel) {
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(dailyForecasts) { forecastDay ->
+        items(dailyForecasts.drop(1)) { forecastDay ->
             ForecastCard(forecastDay)
         }
     }

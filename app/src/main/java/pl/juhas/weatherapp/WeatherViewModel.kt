@@ -52,6 +52,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
         value = preferencesManager.getRefreshInterval(),
         policy = structuralEqualityPolicy()
     )
+
     private var refreshJob: kotlinx.coroutines.Job? = null
 
     private val _currentWeatherResult = MutableLiveData<NetworkResponse<WeatherModel>>()
@@ -82,7 +83,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
             preferencesManager.favoritePlacesFlow
                 .collect { places ->
                     _favoritePlaces.value = places
-                    fetchWeatherForFavorites() // Pobierz dane pogodowe dla ulubionych miejsc
+                    fetchWeatherForFavorites()
                 }
         }
     }
@@ -134,7 +135,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
 
     fun addFavoritePlace(name: String, country: String, lat: Double, lon: Double) {
         viewModelScope.launch {
-            Log.i("addFavoritePlace", "$name $country $lat $lon")
+//            Log.i("addFavoritePlace", "$name $country $lat $lon")
             val place = FavoritePlace(name, country, lat, lon)
             preferencesManager.addFavoritePlace(place)
             refreshFavoritePlaces()
@@ -149,10 +150,18 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /**
+     * Aktualizuje jednostkę i konwertuje istniejące dane pogodowe, jeśli jest offline
+     */
     fun updateUnit(newUnit: String) {
         unit = newUnit
         preferencesManager.saveUnitPreference(newUnit)
-        refreshWeatherData()
+
+        // Jeśli jest połączenie z internetem, po prostu odśwież dane
+        if (checkConnection()) {
+            refreshWeatherData()
+            return
+        }
     }
 
     fun updateRefreshInterval(newInterval: Int) {
@@ -161,9 +170,10 @@ class WeatherViewModel(context: Context) : ViewModel() {
         startAutoRefresh()
     }
 
+    // wyłączyć przy zamknięciu
     private fun startAutoRefresh() {
         refreshJob?.cancel()
-        if (refreshInterval <= 0) return // Wyłącz odświeżanie, jeśli interwał to 0
+        if (refreshInterval <= 0) return
         refreshJob = viewModelScope.launch {
             while (true) {
                 refreshWeatherData()
@@ -176,7 +186,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
         return lat != "0.0" && lon != "0.0" && lat.isNotBlank() && lon.isNotBlank()
     }
 
-    private fun refreshWeatherData() {
+    fun refreshWeatherData() {
         if (checkConnection()) {
             if (isValidLocation(lastLat, lastLon)) {
                 getCurrentWeather(lastLat, lastLon)
@@ -214,14 +224,14 @@ class WeatherViewModel(context: Context) : ViewModel() {
                         response.body()?.let { weather ->
                             _currentWeatherResult.value = NetworkResponse.Success(weather)
                             // Save with location-specific key
-                            Log.i("saveWeatherDataCurrentGETWEATHER", "$lat, $lon")
+//                            Log.i("saveWeatherDataCurrentGETWEATHER", "$lat, $lon")
                             preferencesManager.saveWeatherData(
                                 lat, lon,
                                 gson.toJson(weather)
                             )
 
                             // Also save as last location for fallback
-                            Log.i("saveWeatherDataCurrentGETWEATHER", "$lat, $lon")
+//                            Log.i("saveWeatherDataCurrentGETWEATHER", "$lat, $lon")
                             preferencesManager.saveLastLocation(lat, lon)
                         } ?: run {
                             _currentWeatherResult.value = NetworkResponse.Error("No data found")
@@ -337,7 +347,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
             val weatherDataMap = mutableMapOf<String, WeatherModel>()
 
             favoritePlaces.forEach { place ->
-                Log.i("fetchWeatherForFavorites", "${place.name} ${place.lat} ${place.lon}")
+//                Log.i("fetchWeatherForFavorites", "${place.name} ${place.lat} ${place.lon}")
                 val lat = place.lat.toString()
                 val lon = place.lon.toString()
                 // Tworzę unikalny klucz dla każdej lokalizacji
@@ -354,7 +364,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
                         if (response.isSuccessful) {
                             response.body()?.let { weather ->
                                 weatherDataMap[uniqueKey] = weather
-                                Log.i("saveWeatherDataFavourites", "$lat, $lon")
+//                                Log.i("saveWeatherDataFavourites", "$lat, $lon")
                                 preferencesManager.saveWeatherData(lat, lon, gson.toJson(weather))
                             }
                         }
@@ -385,7 +395,6 @@ class WeatherViewModel(context: Context) : ViewModel() {
 
     /**
      * Synchronicznie pobiera zarówno aktualną pogodę, jak i prognozę dla wybranej lokalizacji.
-     * Zapewnia spójność danych przy kliknięciu w ulubione miejsce.
      */
     fun loadFullWeatherData(lat: String, lon: String) {
         viewModelScope.launch {
@@ -393,7 +402,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
             lastLat = lat
             lastLon = lon
 
-            Log.i("loadFullWeatherData", "Loading full data for $lat, $lon")
+//            Log.i("loadFullWeatherData", "Loading full data for $lat, $lon")
 
             // Najpierw ustawić stan ładowania dla obu źródeł danych
             _currentWeatherResult.value = NetworkResponse.Loading
@@ -440,28 +449,24 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 
-    /**
-     * Pomocnicza metoda do ładowania danych z pamięci podręcznej.
-     * Dodano normalizację współrzędnych dla zapewnienia spójności kluczy cache.
-     */
+
     private fun loadCachedData(lat: String, lon: String) {
         // Normalizuj współrzędne żeby zapewnić spójność kluczy cache
         val normalizedLat = normalizeCoordinate(lat)
         val normalizedLon = normalizeCoordinate(lon)
 
-        Log.i("loadCachedData", "Próba wczytania danych dla lokalizacji: $normalizedLat, $normalizedLon")
+//        Log.i("loadCachedData", "Próba wczytania danych dla lokalizacji: $normalizedLat, $normalizedLon")
 
-        // Sprawdzamy ostatnią lokalizację z zapisanych preferencji w celach debugowania
         val (savedLat, savedLon) = preferencesManager.getLastLocation() ?: Pair("0.0", "0.0")
-        Log.i("loadCachedData", "Ostatnio zapisana lokalizacja: $savedLat, $savedLon")
+//        Log.i("loadCachedData", "Ostatnio zapisana lokalizacja: $savedLat, $savedLon")
 
         // Wczytaj dane aktualnej pogody z cache
         val cachedWeatherData = preferencesManager.getWeatherData(normalizedLat, normalizedLon)
         val cachedForecastData = preferencesManager.getForecastData(normalizedLat, normalizedLon)
 
         // Wyświetlmy obie wartości w logach
-        Log.i("loadCachedData", "Dane pogody z cache: ${if (cachedWeatherData != null) "ZNALEZIONO" else "BRAK"}")
-        Log.i("loadCachedData", "Dane prognozy z cache: ${if (cachedForecastData != null) "ZNALEZIONO" else "BRAK"}")
+//        Log.i("loadCachedData", "Dane pogody z cache: ${if (cachedWeatherData != null) "ZNALEZIONO" else "BRAK"}")
+//        Log.i("loadCachedData", "Dane prognozy z cache: ${if (cachedForecastData != null) "ZNALEZIONO" else "BRAK"}")
 
         var weatherLoaded = false
         var forecastLoaded = false
@@ -488,7 +493,6 @@ class WeatherViewModel(context: Context) : ViewModel() {
                 val forecast = gson.fromJson(cachedForecastData, ForecastModel::class.java)
                 _forecastResult.value = NetworkResponse.Success(forecast)
                 forecastLoaded = true
-                // Wyciągnij nazwę miasta z prognozy aby zweryfikować
                 val forecastCity = forecast.city.name
                 val forecastCountry = forecast.city.country
                 Log.i("loadCachedData", "Pomyślnie wczytano prognozę dla: $normalizedLat, $normalizedLon | Miasto: $forecastCity, $forecastCountry")
@@ -515,7 +519,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
         val (lat, lon) = preferencesManager.getLastLocation() ?: Pair("0.0", "0.0")
 
         if (isValidLocation(lat, lon)) {
-            Log.i("fallbackToLastLocation", "Próba wczytania danych z ostatniej lokalizacji: $lat, $lon")
+//            Log.i("fallbackToLastLocation", "Próba wczytania danych z ostatniej lokalizacji: $lat, $lon")
 
             val normalizedLat = normalizeCoordinate(lat)
             val normalizedLon = normalizeCoordinate(lon)
@@ -548,10 +552,7 @@ class WeatherViewModel(context: Context) : ViewModel() {
         }
     }
 
-    /**
-     * Funkcja pomocnicza do normalizacji współrzędnych geograficznych.
-     * Zapewnia spójny format klucza niezależnie od źródła współrzędnych.
-     */
+
     private fun normalizeCoordinate(coord: String): String {
         return try {
             // Konwertujemy string na double i z powrotem na string z ustaloną precyzją

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import coil.compose.AsyncImage
 import pl.juhas.weatherapp.FavoritePlace
+import pl.juhas.weatherapp.PreferencesManager
 import pl.juhas.weatherapp.R
 import pl.juhas.weatherapp.WeatherViewModel
 import pl.juhas.weatherapp.api.model.WeatherModel
@@ -52,7 +53,6 @@ fun GeneralCurrentWeatherInfo(
     // Observe favorite places from ViewModel
     val favoritePlacesCollection: Collection<FavoritePlace> by
     viewModel.favoritePlaces.collectAsState(initial = emptyList())
-
     val isFavorite = favoritePlacesCollection.any {
         it.name == current.name && it.country == current.sys.country &&
         it.lat == current.coord.lat && it.lon == current.coord.lon

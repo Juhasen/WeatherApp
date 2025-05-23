@@ -70,11 +70,6 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
     val cityNameFromNav = backStackEntry?.arguments?.getString("city")
     val countryFromNav = backStackEntry?.arguments?.getString("country")
 
-    fun load(lat: String, lon: String) {
-        Log.i("Coordinates LOAD", "HomeScreen: $lat, $lon")
-        viewModel.getCurrentWeather(lat, lon)
-        viewModel.getForecast(lat, lon)
-    }
 
     val initialized = remember { mutableStateOf(false) }
 
@@ -148,7 +143,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                         // Sprawdź, czy jest połączenie z internetem przed wyszukiwaniem
                         val hasConnection = viewModel.checkConnection()
                         if (hasConnection) {
-                            Log.i("SZUKANIE MIASTA", "HomeScreen: $localCity")
+//                            Log.i("SZUKANIE MIASTA", "HomeScreen: $localCity")
                             previewCityOptionsLoad(localCity)
                             showSuggestions = true
                             isOfflineMode = false
@@ -174,12 +169,11 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
             return "%.4f".format(coord).trimEnd('0').trimEnd('.').replace(",", ".")
         }
 
-        val context = LocalContext.current
         if (showSuggestions && cityOptions is NetworkResponse.Success<*>) {
             val rawCities = (cityOptions as NetworkResponse.Success<*>).data as List<GeoLocationModelItem>
             val cities = rawCities.distinctBy { "${it.name}-${it.country}-${it.state}" }
             if (cities.isEmpty()) {
-                Toast.makeText(context, "No results found", Toast.LENGTH_SHORT).show()
+                ErrorHandler("No results found")
             }
             Box(
                 modifier = Modifier
@@ -214,7 +208,7 @@ fun HomeScreen(viewModel: WeatherViewModel, backStackEntry: NavBackStackEntry? =
                                     keyboardController?.hide()
                                     val latFormatted = formatCoord(city.lat)
                                     val lonFormatted = formatCoord(city.lon)
-                                    load(latFormatted, lonFormatted)
+                                    viewModel.loadFullWeatherData(latFormatted, lonFormatted)
                                     Log.i("Coordinates", "Load po click: $latFormatted, $lonFormatted")
                                     localCity = ""
                                     showSuggestions = false

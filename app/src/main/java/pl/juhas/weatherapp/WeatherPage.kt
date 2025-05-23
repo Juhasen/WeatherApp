@@ -43,17 +43,9 @@ fun WeatherPage(viewModel: WeatherViewModel, context: Context) {
 
     val navController = rememberNavController()
     val configuration = LocalConfiguration.current
-    val density = LocalDensity.current.density
 
-    // Lepsze wykrywanie urządzeń - sprawdzamy zarówno szerokość, wysokość jak i gęstość pikseli
-    val screenWidthDp = configuration.screenWidthDp
-    val screenHeightDp = configuration.screenHeightDp
-    val screenSizeInches = kotlin.math.sqrt(
-        (screenWidthDp * screenWidthDp + screenHeightDp * screenHeightDp).toDouble()
-    ) / density / 160.0
-
-    // Tablet to urządzenie z przekątną większą niż 7 cali lub szerokością większą niż 600dp w KAŻDEJ orientacji
-    val isTablet = screenSizeInches >= 7.0 || min(screenWidthDp, screenHeightDp) >= 600
+    // Tablet - przekątna większąaniż 7 cali lub szerokością większą niż 600dp w KAŻDEJ orientacji
+    val isTablet = configuration.smallestScreenWidthDp >= 600
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
 
     Box(
@@ -70,7 +62,7 @@ fun WeatherPage(viewModel: WeatherViewModel, context: Context) {
             )
     ) {
         if (isTablet) {
-            // Tablet: pokazujemy wszystkie ekrany jednocześnie
+            // pokazujemy wszystkie ekrany jednocześnie
             if (isLandscape) {
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f).fillMaxSize()) {
@@ -97,7 +89,7 @@ fun WeatherPage(viewModel: WeatherViewModel, context: Context) {
                 }
             }
         } else {
-            // Telefon: klasyczna nawigacja - niezależnie od orientacji
+            // klasyczna nawigacja - niezależnie od orientacji
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
